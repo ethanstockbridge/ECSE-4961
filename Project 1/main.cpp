@@ -22,6 +22,10 @@ public:
         for(unsigned int i=0; i<row; i++)
         {
             M[i] = new T[col];
+            for(unsigned int j=0; j<col; j++)
+            {
+            	M[i][j] = 0;
+            }
         }
     }
     void set(int row, int col, T val)
@@ -47,9 +51,9 @@ public:
     {
         for(unsigned int i=0;i<row;i++)
         {
-            delete M[i];
+            delete[] M[i];
         }
-        delete M;
+        delete[] M;
     }
     T* & operator [](int i)
     {
