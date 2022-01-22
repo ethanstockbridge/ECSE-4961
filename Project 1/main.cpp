@@ -146,16 +146,19 @@ void SIMD_matrix_multiplication(Matrix<T> A, Matrix<T> B, Matrix<T>& C)
         cerr<<"Error, Matrix dimensions do not match"<<endl;
         return;
     }
+    //invert all of B for multiplcation
+    T B_inv[B.getCols()][B.getRows()];
+    for (i=0;i<B.getRows();i++)
+    {
+        for(j=0;j<B.getCols();j++)
+        {
+            B_inv[j][i] = B[i][j];
+        }
+    }
     for (i = 0; i < A.getRows(); i++)
     {
-        for (j = 0; j < B.getCols(); j++)
+        for (j = 0; j < B.getRows(); j++)
         {
-            //flatten each column of B
-            T b_col[B.getCols()];
-            for (k = 0; k < B.getCols(); k++)
-            {
-                b_col[k] = B[k][j];
-            }
             //multiply accumulate flattened column with flattened row
 
             __m128 num1, num2, num3, num4;
@@ -164,21 +167,19 @@ void SIMD_matrix_multiplication(Matrix<T> A, Matrix<T> B, Matrix<T>& C)
 
             for(k=0; k<A.getCols(); k+=4)
             {
-                num1 = _mm_loadu_ps(A[i]+k);   //loads unaligned array a into num1  num1= a[3]  a[2]  a[1]  a[0]
-                num2 = _mm_loadu_ps(b_col+k);   //loads unaligned array b into num2  num2= b[3]   b[2]   b[1]  b[0]
-                num3 = _mm_mul_ps(num1, num2);  //performs multiplication   num3 = a[3]*b[3]  a[2]*b[2]  a[1]*b[1]  a[0]*b[0]
-                num3 = _mm_hadd_ps(num3, num3); //performs horizontal addition
-                                                //num3=  a[3]*b[3]+ a[2]*b[2]  a[1]*b[1]+a[0]*b[0]  a[3]*b[3]+ a[2]*b[2]  a[1]*b[1]+a[0]*b[0]
-                num4 = _mm_add_ps(num4, num3);  //performs vertical addition
+                num1 = _mm_loadu_ps(A[i]+k);            // load: num1 = a[3]  a[2]  a[1]  a[0]
+                num2 = _mm_loadu_ps(B_inv[j]+k);        // load: num2 = b[3]   b[2]   b[1]  b[0]
+                num3 = _mm_mul_ps(num1, num2);          // multiply: num3 = a[3]*b[3]  a[2]*b[2]  a[1]*b[1]  a[0]*b[0]
+                num3 = _mm_hadd_ps(num3, num3);         // horizontal addition: num3 = [a[3]*b[3] + a[2]*b[2] , a[1]*b[1] + a[0]*b[0] , a[3]*b[3] + a[2]*b[2] , a[1]*b[1] + a[0]*b[0]]
+                num4 = _mm_add_ps(num4, num3);          // performs vertical addition
             }
-            num4= _mm_hadd_ps(num4, num4);
+            num4= _mm_hadd_ps(num4, num4); //horizontally adds into num4
             _mm_store_ss(C[i]+j,num4);
         }
     }
 }
 
-
-
+//main function
 int main()
 {
     srand (time(NULL));
@@ -211,6 +212,7 @@ int main()
 
     auto duration1 = duration_cast<microseconds>(stop1 - start1);
     auto duration2 = duration_cast<microseconds>(stop2 - start2);
-    cout<<"Time 1: "<< duration1.count()<< "ns Time 2: "<<duration2.count()<<"ns"<<endl;
+    cout<<"Regular c++ matrix multiplication: "<<duration1.count()<<"ns"<<endl;
+    cout<<"Utilizing Intrinsics: "<<duration2.count()<<"ns"<<endl;
     return 0;
 }
