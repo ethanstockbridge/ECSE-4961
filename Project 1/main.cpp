@@ -136,7 +136,7 @@ void matrix_multiplication(Matrix<T> A, Matrix<T> B, Matrix<T>& C)
 
 //test function for intrinsics matrix multiplication
 template <typename T>
-void SIMD_matrix_multiplication(Matrix<T> A, Matrix<T> B, Matrix<T>& C)
+void SIMD_matrix_multiplication(Matrix<T>& A, Matrix<T>& B, Matrix<T>& C)
 {
     int i,j,k;
     if( (A.getCols() != B.getRows()) || 
@@ -146,8 +146,14 @@ void SIMD_matrix_multiplication(Matrix<T> A, Matrix<T> B, Matrix<T>& C)
         cerr<<"Error, Matrix dimensions do not match"<<endl;
         return;
     }
-    //invert all of B for multiplcation
-    T B_inv[B.getCols()][B.getRows()];
+
+    //create a new matrix to store inverted B in
+    T** B_inv = new T*[B.getCols()];
+    for (i=0;i<B.getRows();i++)
+    {
+        B_inv[i] = new T[B.getRows()];
+    }
+    //invert values of B
     for (i=0;i<B.getRows();i++)
     {
         for(j=0;j<B.getCols();j++)
@@ -160,7 +166,6 @@ void SIMD_matrix_multiplication(Matrix<T> A, Matrix<T> B, Matrix<T>& C)
         for (j = 0; j < B.getRows(); j++)
         {
             //multiply accumulate flattened column with flattened row
-
             __m128 num1, num2, num3, num4;
 
             num4= _mm_setzero_ps();  //sets sum to zero
