@@ -165,20 +165,20 @@ void SIMD_matrix_multiplication(float_matrix& A, float_matrix& B, float_matrix& 
         for (j = 0; j < B.getRows(); j++)
         {
             //multiply accumulate flattened column with flattened row
-            __m128 num1, num2, num3, num4;
+            __m128 num1, num2, num3, sum;
 
-            num4= _mm_setzero_ps();  //sets sum to zero
+            sum= _mm_setzero_ps();  //sets sum to zero
 
             for(k=0; k<A.getCols(); k+=4)
             {
-                num1 = _mm_loadu_ps(A[i]+k);            // load: num1 = a[3]  a[2]  a[1]  a[0]
-                num2 = _mm_loadu_ps(B_inv[j]+k);        // load: num2 = b[3]   b[2]   b[1]  b[0]
-                num3 = _mm_mul_ps(num1, num2);          // multiply: num3 = a[3]*b[3]  a[2]*b[2]  a[1]*b[1]  a[0]*b[0]
-                num3 = _mm_hadd_ps(num3, num3);         // horizontal addition: num3 = [a[3]*b[3] + a[2]*b[2] , a[1]*b[1] + a[0]*b[0] , a[3]*b[3] + a[2]*b[2] , a[1]*b[1] + a[0]*b[0]]
-                num4 = _mm_add_ps(num4, num3);          // performs vertical addition
+                num1 = _mm_loadu_ps(A[i]+k);            // load: num1 = [a[3], a[2], a[1], a[0]]
+                num2 = _mm_loadu_ps(B_inv[j]+k);        // load: num2 = [b[3], b[2], b[1], b[0]]
+                num3 = _mm_mul_ps(num1, num2);          // multiply, store low bits: num3 = [a[3]*b[3],  a[2]*b[2],  a[1]*b[1],  a[0]*b[0]]
+                sum = _mm_add_ps(sum, num3);          // performs vertical addition with previous values 
             }
-            num4= _mm_hadd_ps(num4, num4); //horizontally adds into num4
-            _mm_store_ss(C[i]+j,num4);
+            sum= _mm_hadd_ps(sum, sum); //horizontally adds sums into sum; sum = [prev[3] + prev[2] , prev[1]+prev[0] , prev[3] + prev[2] , prev[1]+prev[0]]
+            sum= _mm_hadd_ps(sum, sum); //horizontally adds into sum; sum[0] = [prev[3] + prev[2] + prev[1] + prev[0] , ...]
+            _mm_store_ss(C[i]+j,sum);
         }
     }
 }
@@ -214,20 +214,20 @@ void SIMD_matrix_multiplication(int_matrix& A, int_matrix& B, int_matrix& C)
         for (j = 0; j < B.getRows(); j++)
         {
             //multiply accumulate flattened column with flattened row
-            __m128i num1, num2, num3, num4;
+            __m128i num1, num2, num3, sum;
 
-            num4= _mm_setzero_si128();  //sets sum to zero
+            sum= _mm_setzero_si128();  //sets sum to zero
 
             for(k=0; k<A.getCols(); k+=4)
             {
-                num1 = _mm_load_si128((__m128i*)(A[i]+k));            // load: num1 = a[3]  a[2]  a[1]  a[0]
-                num2 = _mm_load_si128((__m128i*)(B_inv[j]+k));        // load: num2 = b[3]   b[2]   b[1]  b[0]
-                num3 = _mm_mullo_epi32(num1, num2);                   // multiply, store low bits: num3 = a[3]*b[3]  a[2]*b[2]  a[1]*b[1]  a[0]*b[0]
-                num3 = _mm_hadd_epi32(num3, num3);                    // horizontal addition: num3 = [a[3]*b[3] + a[2]*b[2] , a[1]*b[1] + a[0]*b[0] , a[3]*b[3] + a[2]*b[2] , a[1]*b[1] + a[0]*b[0]]
-                num4 = _mm_add_epi32(num4, num3);                     // performs vertical addition
+                num1 = _mm_load_si128((__m128i*)(A[i]+k));            // load: num1 = [a[3], a[2], a[1], a[0]]
+                num2 = _mm_load_si128((__m128i*)(B_inv[j]+k));        // load: num2 = [b[3], b[2], b[1], b[0]]
+                num3 = _mm_mullo_epi32(num1, num2);                   // multiply, store low bits: num3 = [a[3]*b[3],  a[2]*b[2],  a[1]*b[1],  a[0]*b[0]]
+                sum = _mm_add_epi32(sum, num3);                     // performs vertical addition with previous values 
             }
-            num4= _mm_hadd_epi32(num4, num4); //horizontally adds into num4
-            C[i][j] = _mm_extract_epi32(num4, 0); //sum from above is in num4[0], save to matrix
+            sum= _mm_hadd_epi32(sum, sum); //horizontally adds sums into sum; sum = [prev[3] + prev[2] , prev[1]+prev[0] , prev[3] + prev[2] , prev[1]+prev[0]]
+            sum= _mm_hadd_epi32(sum, sum); //horizontally adds into sum; sum[0] = [prev[3] + prev[2] + prev[1] + prev[0] , ...]
+            C[i][j] = _mm_extract_epi32(sum, 0); //sum from above is in sum[0], save to matrix
         }
     }
 }
@@ -239,33 +239,36 @@ int main()
 
     unsigned int size = 3;
 
-    int_matrix first(size,size);
-    first.randomize();
+    cout<<"Testing int matrix:"<<endl;
+
+    int_matrix A(size,size);
+    A.randomize();
     cout<<"Matrix A:"<<endl;
-    first.print();
+    A.print();
 
-    int_matrix second(size,size);
-    second.randomize();
+    int_matrix B(size,size);
+    B.randomize();
     cout<<"Matrix B:"<<endl;
-    second.print();
+    B.print();
 
     cout<<"A x B ="<<endl;
-    int_matrix result(size,size);
+    int_matrix C(size,size);
     auto start1 = high_resolution_clock::now();
-    matrix_multiplication(first, second, result);
+    matrix_multiplication(A, B, C);
     auto stop1 = high_resolution_clock::now();
-    result.print();
+    C.print();
 
     cout<<"A x B ="<<endl;
-    int_matrix result2(size,size);
+    int_matrix C2(size,size);
     auto start2 = high_resolution_clock::now();
-    SIMD_matrix_multiplication(first, second, result2);
+    SIMD_matrix_multiplication(A, B, C2);
     auto stop2 = high_resolution_clock::now();
-    result2.print();
+    C2.print();
 
     auto duration1 = duration_cast<microseconds>(stop1 - start1);
     auto duration2 = duration_cast<microseconds>(stop2 - start2);
     cout<<"Regular c++ matrix multiplication: "<<duration1.count()<<"ns"<<endl;
     cout<<"Utilizing Intrinsics: "<<duration2.count()<<"ns"<<endl;
+
     return 0;
 }
