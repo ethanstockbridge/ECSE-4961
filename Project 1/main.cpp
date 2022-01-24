@@ -14,6 +14,7 @@ template <typename T>
 class Matrix
 {
     T** M; //our matrix
+    T** M_inv;
     unsigned int col; 
     unsigned int row; 
 
@@ -27,10 +28,6 @@ public:
         for(unsigned int i=0; i<row; i++)
         {
             this->M[i] = new T[col];
-            for(unsigned int j=0; j<this->col; j++)
-            {
-            	this->M[i][j] = 0;
-            }
         }
     }
     void set(int row, int col, T val)
@@ -39,7 +36,23 @@ public:
     }
     unsigned int getRows(){return this->row;}
     unsigned int getCols(){return this->col;}
-
+    void calculateInvert()
+    {
+        //create a new matrix to store inverted B in
+        M_inv = new T*[col];
+        for (int i=0;i<row;i++)
+        {
+            M_inv[i] = new T[row];
+        }
+        //invert values of B
+        for (int i=0;i<row;i++)
+        {
+            for(int j=0;j<col;j++)
+            {
+                M_inv[j][i] = M[i][j];
+            }
+        }
+    }
     void print()
     {
         for(unsigned int i=0; i<row; i++)
@@ -59,6 +72,10 @@ public:
             delete[] this->M[i];
         }
         delete[] this->M;
+    }
+    T** getInvertedMatrix()
+    {
+        return this->M_inv;
     }
     T** getMatrix()
     {
@@ -86,6 +103,8 @@ public:
                 this->set(i,j,rand()%10+float(rand()%1000)/1000);
             }
         }
+        //load inverted values
+        this->calculateInvert(); 
     }
     ~float_matrix(){this->free();}
 };
@@ -105,28 +124,23 @@ public:
                 this->set(i,j,rand()%10);
             }
         }
+        //load inverted values
+        this->calculateInvert();
     }
     ~int_matrix(){this->free();}
 };
 
 //test function for normal c matrix multiplication
 template <typename T>
-void matrix_multiplication(Matrix<T> A, Matrix<T> B, Matrix<T>& C)
+void matrix_multiplication(T** A, T** B, T** C, int size)
 {
     int i,j,k;
-    if( (A.getCols() != B.getRows()) || 
-    	(C.getCols() != B.getCols()) ||
-    	(C.getRows() != A.getRows()) )
+    for (i = 0; i < size; i++)
     {
-        cerr<<"Error, Matrix dimensions do not match"<<endl;
-    	return;
-    }
-    for (i = 0; i < A.getRows(); i++)
-    {
-        for (j = 0; j < B.getCols(); j++)
+        for (j = 0; j < size; j++)
         {
             C[i][j] = 0;
-            for (k = 0; k < A.getCols(); k++)
+            for (k = 0; k < size; k++)
             {
                 C[i][j] += A[i][k]*B[k][j];
             }
@@ -134,10 +148,10 @@ void matrix_multiplication(Matrix<T> A, Matrix<T> B, Matrix<T>& C)
     }
 }
 
+
 //test function for intrinsics matrix multiplication
 void SIMD_matrix_multiplication(float_matrix& A, float_matrix& B, float_matrix& C)
 {
-    int i,j,k;
     if( (A.getCols() != B.getRows()) || 
         (C.getCols() != B.getCols()) ||
         (C.getRows() != A.getRows()) )
@@ -145,40 +159,34 @@ void SIMD_matrix_multiplication(float_matrix& A, float_matrix& B, float_matrix& 
         cerr<<"Error, Matrix dimensions do not match"<<endl;
         return;
     }
+    unsigned int i,j,k;
+    float ans[8];
+    __m256 num1, num2, num3, sum;
+    float** matrixA = A.getMatrix();
+    float** matrixB = B.getInvertedMatrix();
+    float** matrixC = C.getMatrix();
+    int size = A.getRows();
 
-    //create a new matrix to store inverted B in
-    float** B_inv = new float*[B.getCols()];
-    for (i=0;i<B.getRows();i++)
+    for (i = 0; i < size; i++)
     {
-        B_inv[i] = new float[B.getRows()];
-    }
-    //invert values of B
-    for (i=0;i<B.getRows();i++)
-    {
-        for(j=0;j<B.getCols();j++)
+        float* arow = matrixA[i];
+        for (j = 0; j < size; j++)
         {
-            B_inv[j][i] = B[i][j];
-        }
-    }
-    for (i = 0; i < A.getRows(); i++)
-    {
-        for (j = 0; j < B.getRows(); j++)
-        {
+            float* brow = matrixB[j];
             //multiply accumulate flattened column with flattened row
-            __m128 num1, num2, num3, sum;
+            sum= _mm256_setzero_ps();  //sets sum to zero
 
-            sum= _mm_setzero_ps();  //sets sum to zero
-
-            for(k=0; k<A.getCols(); k+=4)
+            for(k=0; k<size; k+=8)
             {
-                num1 = _mm_loadu_ps(A[i]+k);            // load: num1 = [a[3], a[2], a[1], a[0]]
-                num2 = _mm_loadu_ps(B_inv[j]+k);        // load: num2 = [b[3], b[2], b[1], b[0]]
-                num3 = _mm_mul_ps(num1, num2);          // multiply, store low bits: num3 = [a[3]*b[3],  a[2]*b[2],  a[1]*b[1],  a[0]*b[0]]
-                sum = _mm_add_ps(sum, num3);          // performs vertical addition with previous values 
+                // num1 = _mm256_loadu_ps(arow+k);             // load: num1 = [a[7], a[6], a[5], a[4]. a[3], a[2], a[1], a[0]]
+                // num2 = _mm256_loadu_ps(brow+k);             // load: num2 = [b[7], b[6], b[5], b[4], b[3], b[2], b[1], b[0]]
+                // num3 = _mm256_dp_ps(num1, num2, 0xFF);      // dot prod hi,low: [a[7]b[7] + a[6]b[6] + ,..., a[3]b[3] + a[2]b[2]+ ,...]
+                // combining saves time vs storing into num 1,2:
+                num3 = _mm256_dp_ps(_mm256_loadu_ps(arow+k), _mm256_loadu_ps(brow+k), 0xFF);      // dot prod hi,low: [a[7]b[7] + a[6]b[6] + ,..., a[3]b[3] + a[2]b[2]+ ,...]
+                sum = _mm256_add_ps(sum, num3);             // performs vertical addition with previous values
             }
-            sum= _mm_hadd_ps(sum, sum); //horizontally adds sums into sum; sum = [prev[3] + prev[2] , prev[1]+prev[0] , prev[3] + prev[2] , prev[1]+prev[0]]
-            sum= _mm_hadd_ps(sum, sum); //horizontally adds into sum; sum[0] = [prev[3] + prev[2] + prev[1] + prev[0] , ...]
-            _mm_store_ss(C[i]+j,sum);
+            _mm256_storeu_ps(ans, sum); //stores sum to local float
+            matrixC[i][j] = ans[0] + ans[4]; //set matrix answer
         }
     }
 }
@@ -194,34 +202,18 @@ void SIMD_matrix_multiplication(int_matrix& A, int_matrix& B, int_matrix& C)
         cerr<<"Error, Matrix dimensions do not match"<<endl;
         return;
     }
-
-    //create a new matrix to store inverted B in
-    int** B_inv = new int*[B.getCols()];
-    for (i=0;i<B.getRows();i++)
-    {
-        B_inv[i] = new int[B.getRows()];
-    }
-    //invert values of B
-    for (i=0;i<B.getRows();i++)
-    {
-        for(j=0;j<B.getCols();j++)
-        {
-            B_inv[j][i] = B[i][j];
-        }
-    }
+    __m128i num1, num2, num3, sum;
     for (i = 0; i < A.getRows(); i++)
     {
         for (j = 0; j < B.getRows(); j++)
         {
             //multiply accumulate flattened column with flattened row
-            __m128i num1, num2, num3, sum;
-
             sum= _mm_setzero_si128();  //sets sum to zero
 
             for(k=0; k<A.getCols(); k+=4)
             {
                 num1 = _mm_load_si128((__m128i*)(A[i]+k));            // load: num1 = [a[3], a[2], a[1], a[0]]
-                num2 = _mm_load_si128((__m128i*)(B_inv[j]+k));        // load: num2 = [b[3], b[2], b[1], b[0]]
+                num2 = _mm_load_si128((__m128i*)(B.getInvertedMatrix()[j]+k));        // load: num2 = [b[3], b[2], b[1], b[0]]
                 num3 = _mm_mullo_epi32(num1, num2);                   // multiply, store low bits: num3 = [a[3]*b[3],  a[2]*b[2],  a[1]*b[1],  a[0]*b[0]]
                 sum = _mm_add_epi32(sum, num3);                     // performs vertical addition with previous values 
             }
@@ -239,32 +231,31 @@ int main()
 
     unsigned int size = 3;
 
-    cout<<"Testing int matrix:"<<endl;
-
-    int_matrix A(size,size);
+    cout<<"Testing float matrix:"<<endl;
+    float_matrix A(size, size);
     A.randomize();
+    A.calculateInvert();
     cout<<"Matrix A:"<<endl;
     A.print();
 
-    int_matrix B(size,size);
+    float_matrix B(size, size);
     B.randomize();
     cout<<"Matrix B:"<<endl;
     B.print();
 
     cout<<"A x B ="<<endl;
-    int_matrix C(size,size);
+    float_matrix C(size,size);
     auto start1 = high_resolution_clock::now();
-    matrix_multiplication(A, B, C);
+    matrix_multiplication(A.getMatrix(), B.getMatrix(), C.getMatrix(), size);
     auto stop1 = high_resolution_clock::now();
     C.print();
 
     cout<<"A x B ="<<endl;
-    int_matrix C2(size,size);
+    float_matrix C2(size,size);
     auto start2 = high_resolution_clock::now();
     SIMD_matrix_multiplication(A, B, C2);
     auto stop2 = high_resolution_clock::now();
     C2.print();
-
     auto duration1 = duration_cast<microseconds>(stop1 - start1);
     auto duration2 = duration_cast<microseconds>(stop2 - start2);
     cout<<"Regular c++ matrix multiplication: "<<duration1.count()<<"us"<<endl;
