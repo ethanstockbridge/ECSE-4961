@@ -267,8 +267,8 @@ int main()
 
     auto duration1 = duration_cast<microseconds>(stop1 - start1);
     auto duration2 = duration_cast<microseconds>(stop2 - start2);
-    cout<<"Regular c++ matrix multiplication: "<<duration1.count()<<"ns"<<endl;
-    cout<<"Utilizing Intrinsics: "<<duration2.count()<<"ns"<<endl;
+    cout<<"Regular c++ matrix multiplication: "<<duration1.count()<<"us"<<endl;
+    cout<<"Utilizing Intrinsics: "<<duration2.count()<<"us"<<endl;
 
     return 0;
 }
