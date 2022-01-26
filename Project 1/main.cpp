@@ -1,146 +1,46 @@
-//Cpp imports
+/**
+ * @file main.cpp
+ * @author Ethan Stockbridge (ethanstockbridge@gmail.com)
+ * @author Devan Kidd (jjkidd1245@gmail.com)
+ * @brief Main file for performing matrix multiplication performance beteen 
+ * regular c++ matrix multiplication and utilizing intel intrinsics
+ * @date 2022-01-25
+ */
+
 #include <iostream>
 #include <time.h>
 #include <chrono>
-//intrinsic includes
+// For intrinsics functions:
 #include <immintrin.h>
+#include "matrix.h"
 
-using namespace std::chrono;
 using namespace std;
 
 
-//prototype basic matrix class containing matrix data
+/**
+ * @brief Matrix multiplication using regular C++ basic matrix multiplication
+ * 
+ * @param A First input matrix
+ * @param B Second input matrix
+ * @param C Output matrix (A x B = C)
+ */
 template <typename T>
-class Matrix
+void matrix_multiplication(Matrix<T> A, Matrix<T> B, Matrix<T> C)
 {
-    T** M; //our matrix
-    T** M_inv;
-    unsigned int col; 
-    unsigned int row; 
-
-public:
-    Matrix(unsigned int mrow, unsigned int mcol)
+    if( (A.getCols() != B.getRows()) || 
+        (C.getCols() != B.getCols()) ||
+        (C.getRows() != A.getRows()) )
     {
-        this->col = mcol;
-        this->row = mrow;
-        //initilize the matrix with specified size
-        this->M = new T*[row];
-        for(unsigned int i=0; i<row; i++)
-        {
-            this->M[i] = new T[col];
-        }
+        cerr<<"Error: Cannot perform matrix multiplication because matrix dimensions do not match"<<endl;
+        return;
     }
-    void set(int row, int col, T val)
-    {
-        this->M[row][col] = val;
-    }
-    unsigned int getRows(){return this->row;}
-    unsigned int getCols(){return this->col;}
-    void calculateInvert()
-    {
-        //create a new matrix to store inverted B in
-        M_inv = new T*[col];
-        for (int i=0;i<row;i++)
-        {
-            M_inv[i] = new T[row];
-        }
-        //invert values of B
-        for (int i=0;i<row;i++)
-        {
-            for(int j=0;j<col;j++)
-            {
-                M_inv[j][i] = M[i][j];
-            }
-        }
-    }
-    void print()
-    {
-        for(unsigned int i=0; i<row; i++)
-        {
-            for(unsigned int j=0; j<col; j++)
-            {
-                cout<<this->M[i][j]<<"\t";
-            }
-            cout<<endl;
-        }
-        cout<<endl;
-    }
-    void free()
-    {
-        for(unsigned int i=0;i<row;i++)
-        {
-            delete[] this->M[i];
-        }
-        delete[] this->M;
-    }
-    T** getInvertedMatrix()
-    {
-        return this->M_inv;
-    }
-    T** getMatrix()
-    {
-        return this->M;
-    }
-    T* & operator [](int i)
-    {
-        return this->M[i];
-    }
-};
-
-
-// extends matrix class using float logic
-class float_matrix: public Matrix<float>
-{
-public:
-    //call parent constructor
-    float_matrix(unsigned int mrow, unsigned int mcol): Matrix(mrow, mcol){}
-    void randomize()
-    {//randomize using float randoms
-        for(int i=0; i < this->getRows(); i++)
-        {
-            for(int j=0; j< this->getCols(); j++)
-            {
-                this->set(i,j,rand()%10+float(rand()%1000)/1000);
-            }
-        }
-        //load inverted values
-        this->calculateInvert(); 
-    }
-    ~float_matrix(){this->free();}
-};
-
-// extends matrix class using int logic
-class int_matrix: public Matrix<int>
-{
-public:
-    //call parent constructor
-    int_matrix(unsigned int mrow, unsigned int mcol): Matrix(mrow, mcol){}
-    void randomize()
-    {//randomize using integer randoms
-        for(int i=0; i < this->getRows(); i++)
-        {
-            for(int j=0; j< this->getCols(); j++)
-            {
-                this->set(i,j,rand()%10);
-            }
-        }
-        //load inverted values
-        this->calculateInvert();
-    }
-    ~int_matrix(){this->free();}
-};
-
-//test function for normal c matrix multiplication
-template <typename T>
-void matrix_multiplication(T** A, T** B, T** C, int size)
-{
     int i,j,k;
-    for (i = 0; i < size; i++)
+    for (i = 0; i < A.getRows(); i++)
     {
-        for (j = 0; j < size; j++)
+        for (j = 0; j < B.getCols(); j++)
         {
             C[i][j] = 0;
-            for (k = 0; k < size; k++)
+            for (k = 0; k < A.getCols(); k++)
             {
                 C[i][j] += A[i][k]*B[k][j];
             }
@@ -149,50 +49,68 @@ void matrix_multiplication(T** A, T** B, T** C, int size)
 }
 
 
-//test function for intrinsics matrix multiplication
-void SIMD_matrix_multiplication(float_matrix& A, float_matrix& B, float_matrix& C)
+/**
+ * @brief Matrix multiplication using intel intrinsics instructions for floats
+ * 
+ * @param A First input matrix
+ * @param B Second input matrix
+ * @param C Output matrix (A x B = C)
+ */
+void SIMD_float_matrix_multiplication(Matrix<float>& A, Matrix<float>& B, Matrix<float>& C)
 {
     if( (A.getCols() != B.getRows()) || 
         (C.getCols() != B.getCols()) ||
         (C.getRows() != A.getRows()) )
     {
-        cerr<<"Error, Matrix dimensions do not match"<<endl;
+        cerr<<"Error: Cannot perform matrix multiplication because matrix dimensions do not match"<<endl;
         return;
     }
+    
     unsigned int i,j,k;
     float ans[8];
     __m256 num1, num2, num3, sum;
+
     float** matrixA = A.getMatrix();
     float** matrixB = B.getInvertedMatrix();
     float** matrixC = C.getMatrix();
-    int size = A.getRows();
 
-    for (i = 0; i < size; i++)
+    unsigned int size1 = A.getRows(); //= C.getRows()
+    unsigned int size2 = B.getCols(); //= C.getCols()
+    unsigned int size3 = A.getCols(); //= B.getRows()
+
+    for (i = 0; i < size1; i++)
     {
         float* arow = matrixA[i];
-        for (j = 0; j < size; j++)
+        for (j = 0; j < size2; j++)
         {
             float* brow = matrixB[j];
             //multiply accumulate flattened column with flattened row
             sum= _mm256_setzero_ps();  //sets sum to zero
 
-            for(k=0; k<size; k+=8)
+            for(k=0; k<size3; k+=8)
             {
                 // num1 = _mm256_loadu_ps(arow+k);             // load: num1 = [a[7], a[6], a[5], a[4]. a[3], a[2], a[1], a[0]]
                 // num2 = _mm256_loadu_ps(brow+k);             // load: num2 = [b[7], b[6], b[5], b[4], b[3], b[2], b[1], b[0]]
                 // num3 = _mm256_dp_ps(num1, num2, 0xFF);      // dot prod hi,low: [a[7]b[7] + a[6]b[6] + ,..., a[3]b[3] + a[2]b[2]+ ,...]
-                // combining saves time vs storing into num 1,2:
-                num3 = _mm256_dp_ps(_mm256_loadu_ps(arow+k), _mm256_loadu_ps(brow+k), 0xFF);      // dot prod hi,low: [a[7]b[7] + a[6]b[6] + ,..., a[3]b[3] + a[2]b[2]+ ,...]
+                // Combining the above saves time vs storing into num 1,2:
+                num3 = _mm256_dp_ps(_mm256_loadu_ps(arow+k), _mm256_loadu_ps(brow+k), 0xFF);
                 sum = _mm256_add_ps(sum, num3);             // performs vertical addition with previous values
             }
             _mm256_storeu_ps(ans, sum); //stores sum to local float
             matrixC[i][j] = ans[0] + ans[4]; //set matrix answer
         }
+        
     }
 }
 
-
-void SIMD_matrix_multiplication(int_matrix& A, int_matrix& B, int_matrix& C)
+/**
+ * @brief Matrix multiplication using intel intrinsics instructions for integers
+ * 
+ * @param A First input matrix
+ * @param B Second input matrix
+ * @param C Output matrix (A x B = C)
+ */
+void SIMD_matrix_multiplication(Matrix<unsigned int>& A, Matrix<unsigned int>& B, Matrix<unsigned int>& C)
 {
     int i,j,k;
     if( (A.getCols() != B.getRows()) || 
@@ -205,7 +123,7 @@ void SIMD_matrix_multiplication(int_matrix& A, int_matrix& B, int_matrix& C)
     __m128i num1, num2, num3, sum;
     for (i = 0; i < A.getRows(); i++)
     {
-        for (j = 0; j < B.getRows(); j++)
+        for (j = 0; j < B.getCols(); j++)
         {
             //multiply accumulate flattened column with flattened row
             sum= _mm_setzero_si128();  //sets sum to zero
@@ -224,40 +142,45 @@ void SIMD_matrix_multiplication(int_matrix& A, int_matrix& B, int_matrix& C)
     }
 }
 
-//main function
+
+/**
+ * @brief Main function for executing matrix multiplication and testing the performance
+ */
 int main()
 {
+    // Set the seed time for random
     srand (time(NULL));
 
+    // Size for default N x N matrix multiplication:
     unsigned int size = 3;
 
     cout<<"Testing float matrix:"<<endl;
-    float_matrix A(size, size);
-    A.randomize();
+    Matrix<float> A(size, size, true);
     A.calculateInvert();
     cout<<"Matrix A:"<<endl;
     A.print();
 
-    float_matrix B(size, size);
-    B.randomize();
+    Matrix<float> B(size, size, true);
+    B.calculateInvert();
     cout<<"Matrix B:"<<endl;
     B.print();
 
     cout<<"A x B ="<<endl;
-    float_matrix C(size,size);
-    auto start1 = high_resolution_clock::now();
-    matrix_multiplication(A.getMatrix(), B.getMatrix(), C.getMatrix(), size);
-    auto stop1 = high_resolution_clock::now();
+    Matrix<float>  C(size, size, false);
+    auto start1 = std::chrono::high_resolution_clock::now();
+    matrix_multiplication(A, B, C);
+    auto stop1 = std::chrono::high_resolution_clock::now();
     C.print();
 
     cout<<"A x B ="<<endl;
-    float_matrix C2(size,size);
-    auto start2 = high_resolution_clock::now();
-    SIMD_matrix_multiplication(A, B, C2);
-    auto stop2 = high_resolution_clock::now();
+    Matrix<float>  C2(size, size, false);
+    auto start2 = std::chrono::high_resolution_clock::now();
+    SIMD_float_matrix_multiplication(A, B, C2);
+    auto stop2 = std::chrono::high_resolution_clock::now();
     C2.print();
-    auto duration1 = duration_cast<microseconds>(stop1 - start1);
-    auto duration2 = duration_cast<microseconds>(stop2 - start2);
+    auto duration1 = std::chrono::duration_cast<std::chrono::microseconds>(stop1 - start1);
+    auto duration2 = std::chrono::duration_cast<std::chrono::microseconds>(stop2 - start2);
+    
     cout<<"Regular c++ matrix multiplication: "<<duration1.count()<<"us"<<endl;
     cout<<"Utilizing Intrinsics: "<<duration2.count()<<"us"<<endl;
 
