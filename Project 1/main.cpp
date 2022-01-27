@@ -98,8 +98,7 @@ void SIMD_float_matrix_multiplication(Matrix<float>& A, Matrix<float>& B, Matrix
             }
             _mm256_storeu_ps(ans, sum); //stores sum to local float
             matrixC[i][j] = ans[0] + ans[4]; //set matrix answer
-        }
-        
+        }   
     }
 }
 
@@ -120,26 +119,25 @@ void SIMD_matrix_multiplication(Matrix<unsigned int>& A, Matrix<unsigned int>& B
         cerr<<"Error, Matrix dimensions do not match"<<endl;
         return;
     }
-    __m128i num1, num2, num3, sum;
-    for (i = 0; i < A.getRows(); i++)
-    {
-        for (j = 0; j < B.getCols(); j++)
-        {
-            //multiply accumulate flattened column with flattened row
-            sum= _mm_setzero_si128();  //sets sum to zero
 
-            for(k=0; k<A.getCols(); k+=4)
-            {
-                num1 = _mm_load_si128((__m128i*)(A[i]+k));            // load: num1 = [a[3], a[2], a[1], a[0]]
-                num2 = _mm_load_si128((__m128i*)(B.getInvertedMatrix()[j]+k));        // load: num2 = [b[3], b[2], b[1], b[0]]
-                num3 = _mm_mullo_epi32(num1, num2);                   // multiply, store low bits: num3 = [a[3]*b[3],  a[2]*b[2],  a[1]*b[1],  a[0]*b[0]]
-                sum = _mm_add_epi32(sum, num3);                     // performs vertical addition with previous values 
-            }
-            sum= _mm_hadd_epi32(sum, sum); //horizontally adds sums into sum; sum = [prev[3] + prev[2] , prev[1]+prev[0] , prev[3] + prev[2] , prev[1]+prev[0]]
-            sum= _mm_hadd_epi32(sum, sum); //horizontally adds into sum; sum[0] = [prev[3] + prev[2] + prev[1] + prev[0] , ...]
-            C[i][j] = _mm_extract_epi32(sum, 0); //sum from above is in sum[0], save to matrix
-        }
-    }
+    for (int i = 0; i < A.getCols(); i++) {
+ 		for (int j = 0; j < A.getCols(); j += 16) {
+ 			//set summs to 0
+    		auto sumA = _mm256_setzero_si256();
+    		auto sumB = _mm256_setzero_si256();
+    		for (int k = 0; k < A.getCols(); k++) {
+      			auto bc_mat1 = _mm256_set1_epi32(A[i][k]);	//broadcast 32-bit int
+      			auto vecA_mat2 = _mm256_loadu_si256((__m256i*)&B[k][j]);	//load int from b
+      			auto vecB_mat2 = _mm256_loadu_si256((__m256i*)&B[k][j + 8]);//load next int from b
+      			auto prodA = _mm256_mullo_epi32(bc_mat1, vecA_mat2);	//multiply initial A & B values
+      			auto prodB = _mm256_mullo_epi32(bc_mat1, vecB_mat2);	//multiply second A & B values
+      			sumA = _mm256_add_epi32(sumA, prodA);	//add initial sums and products
+      			sumB = _mm256_add_epi32(sumB, prodB);	//add secondary sums and products
+    		}
+    	_mm256_storeu_si256((__m256i*)&C[i][j], sumA);	//store initial value in c
+    	_mm256_storeu_si256((__m256i*)&C[i][j + 8], sumB);	//store secondary value in c
+  		}
+	}
 }
 
 
@@ -184,5 +182,36 @@ int main()
     cout<<"Regular c++ matrix multiplication: "<<duration1.count()<<"us"<<endl;
     cout<<"Utilizing Intrinsics: "<<duration2.count()<<"us"<<endl;
 
+	//------------------------------------------------------
+
+	cout<<"Testing int matrix:"<<endl;
+    Matrix<unsigned int> D(size, size, true);
+    D.calculateInvert();
+    cout<<"Matrix A:"<<endl;
+    D.print();
+
+    Matrix<unsigned int> E(size, size, true);
+    E.calculateInvert();
+    cout<<"Matrix B:"<<endl;
+    E.print();
+
+    cout<<"Standard A x B ="<<endl;
+    Matrix<unsigned int>  F(size, size, false);
+    auto start3 = std::chrono::high_resolution_clock::now();
+    matrix_multiplication(D, E, F);
+    auto stop3 = std::chrono::high_resolution_clock::now();
+    F.print();
+
+    cout<<"SIMD A x B ="<<endl;
+    Matrix<unsigned int>  F2(size, size, false);
+    auto start4 = std::chrono::high_resolution_clock::now();
+    SIMD_matrix_multiplication(D, E, F2);
+    auto stop4 = std::chrono::high_resolution_clock::now();
+    F2.print();
+    auto duration3 = std::chrono::duration_cast<std::chrono::microseconds>(stop3 - start3);
+    auto duration4 = std::chrono::duration_cast<std::chrono::microseconds>(stop4 - start4);
+    
+    cout<<"Regular c++ matrix multiplication: "<<duration3.count()<<"us"<<endl;
+    cout<<"Utilizing Intrinsics: "<<duration4.count()<<"us"<<endl;
     return 0;
 }
