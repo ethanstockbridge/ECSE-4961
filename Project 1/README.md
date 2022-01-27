@@ -39,19 +39,19 @@ One of the implimentations coded uses floating point numbers as the type for the
 
 Below shows the difference in times between the c++ matrix multiplication, using only normal ```+``` and ```*``` operations, versus using the implimented AVX SIMD instructions.
 
-| Matrix Size | Traditional C++ Time | AVX SIMD Timing |
-|-------------|----------------------|-----------------|
-| 100         |                      |                 |
-| 1000        |                      |                 |
-| 10000       |                      |                 |
+| Matrix Size | Traditional C++ Time | AVX SIMD Time |
+|-------------|----------------------|---------------|
+| 100         |                      |               |
+| 1000        |                      |               |
+| 10000       |                      |               |
 
 Additionally, using the #define, ```CACHE_OPTIMIZATION```, the resulting numbers have been observed:
 
-| Matrix Size | Traditional C++ Time | AVX SIMD Timing |
-|-------------|----------------------|-----------------|
-| 100         |                      |                 |
-| 1000        |                      |                 |
-| 10000       |                      |                 |
+| Matrix Size | Traditional C++ Time | AVX SIMD Time |
+|-------------|----------------------|---------------|
+| 100         |                      |               |
+| 1000        |                      |               |
+| 10000       |                      |               |
 
 ### Fixed point integers
 
@@ -59,17 +59,17 @@ Another implimentation coded uses fixed point unsigned intnumbers as the type fo
 
 Similar to above, the following numbers were observed from testing:
 
-| Matrix Size | Traditional C++ Time | AVX SIMD Timing |
-|-------------|----------------------|-----------------|
-| 100         |                      |                 |
-| 1000        |                      |                 |
-| 10000       |                      |                 |
+| Matrix Size | Traditional C++ Time | AVX SIMD Time |
+|-------------|----------------------|---------------|
+| 100         |                      |               |
+| 1000        |                      |               |
+| 10000       |                      |               |
 
 Using #define, ```CACHE_OPTIMIZATION```:
 
 
-| Matrix Size | Traditional C++ Time | AVX SIMD Timing |
-|-------------|----------------------|-----------------|
-| 100         |                      |                 |
-| 1000        |                      |                 |
-| 10000       |                      |                 |
+| Matrix Size | Traditional C++ Time | AVX SIMD Time |
+|-------------|----------------------|---------------|
+| 100         |                      |               |
+| 1000        |                      |               |
+| 10000       |                      |               |
