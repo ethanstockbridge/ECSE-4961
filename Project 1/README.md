@@ -21,7 +21,7 @@ This project utilizes c++ templated classes, which are named ```Matrix<T>```. Th
 
 This project can be built using the command line and calling g++, using the following line:
 
-```g++ -Wall -g *.cpp -o main.o -msse4.1 -mavx```
+```g++ -Wall -g *.cpp -o main.o -msse4.1 -mavx2```
 
 ### Execution
 
