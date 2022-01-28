@@ -2,9 +2,13 @@
  * @file matrix.h
  * @author Ethan Stockbridge (ethanstockbridge@gmail.com)
  * @author Devan Kidd (jjkidd1245@gmail.com)
- * @brief Matrix class and associated helper functions 
+ * @brief Matrix class definitions 
  * @date 2022-01-25
  */
+
+
+#ifndef MATRIX_H
+#define MATRIX_H
 
 #define ROW_WIDTH 8
 
@@ -19,10 +23,9 @@ class Matrix
 private:
 
     /**
-     * @brief The curent matrix and inverted matrix
+     * @brief The curent matrix
      */
     T** M;
-    T** M_inv;
     /**
      * @brief The row and column values of the stored matrix
      */
@@ -38,7 +41,8 @@ public:
      * @brief Constructor of the matrix class
      * @param mrow The number of rows to make this matrix
      * @param mcol The number of columns to make this matrix
-     * @param randomize Randomize the numbers inside of the matrix
+     * @param randomize If true, randomize the numbers inside of the matrix.
+     * Otherwise, initialize them all to 0.
      */
     Matrix(unsigned int mrow, unsigned int mcol, bool randomize);
     /**
@@ -48,27 +52,19 @@ public:
 
     // Accessors
     /**
-     * @brief Get the matrix's amount of rows
+     * @brief Get the matrix's number of rows
      * 
      * @return unsigned int 
      */
-    unsigned int getRows(){return this->row;}
+    unsigned int getRows() const { return this->row; }
     /**
-     * @brief Get the matrix's amount of columns
+     * @brief Get the matrix's number of columns
      * 
      * @return unsigned int 
      */
-    unsigned int getCols(){return this->col;}
+    unsigned int getCols() const { return this->col; }
 
-    T* getCol(int r) const
-    {
-        T* c[this->realCol];
-        for(int i=0;i<this->realCol;i++)
-        {
-            c[i] = &(this->M[r][i]);
-        }
-        return *c;
-    }
+    T* getCol(int r) const;
 
     // Modifiers
     /**
@@ -77,7 +73,6 @@ public:
      * @param randomize If true, randomize the contents. If false, set to 0.
      */
     void fill(bool randomize);
-   
     /**
      * @brief Set a value of the matrix
      * 
@@ -85,41 +80,28 @@ public:
      * @param col The column desired to be set
      * @param val The value to set this cell to
      */
-    void set(const int row, const int col, const T val)
+    void set(const int row, const int col, const T val) const
     {
         this->M[row][col] = val;
     }
-
     /**
-     * @brief Calculate the inverted matrix 
+     * @brief Calculate the inverted matrix and set it to our matrix
      */
-    void calculateInvert();
+    void invert();
     /**
      * @brief Print the matrix 
      */
-    void print() const;
+    void print();
     /**
      * @brief Free the allocated space in the matrix object
      */
     void free();
     /**
-     * @brief Get the inverted matrix
-     * 
-     * @return T** This object's inverted matrix
-     */
-    T** getInvertedMatrix()
-    {
-        return this->M_inv;
-    }
-    /**
      * @brief Get the matrix
      * 
      * @return T** This object's matrix
      */
-    T** getMatrix()
-    {
-        return this->M;
-    }
+    T** getMatrix() const { return this->M; }
 
     // Opertors
     /**
@@ -128,10 +110,7 @@ public:
      * @param i Number indicating row desired 
      * @return T*& Row "i" of the matrix
      */
-    T* & operator [](int i)
-    {
-        return this->M[i];
-    }
+    T* & operator [](int i) const { return this->M[i]; }
 };
  
 // Matrix function implimentation 
@@ -152,8 +131,6 @@ Matrix<T>::Matrix(unsigned int mrow, unsigned int mcol, bool randomize)
         this->M[i] = new T[this->realCol];
     }
     this->fill(randomize);
-    //Get the inverted matrix for future calculations 
-    this->calculateInvert();
 }
 
 template <typename T>
@@ -163,7 +140,7 @@ Matrix<T>::~Matrix()
 }
 
 template <typename T>
-void Matrix<T>::print() const
+void Matrix<T>::print()
 {
     for(unsigned int i=0; i<this->row; i++)
     {
@@ -184,30 +161,40 @@ void Matrix<T>::free()
         delete[] this->M[i];
     }
     delete[] this->M;
-    for(unsigned int i=0;i<this->realCol;i++)
-    {
-        delete[] this->M_inv[i];
-    }
-    delete[] this->M_inv;
 }
 
 template <typename T>
-void Matrix<T>::calculateInvert()
+void Matrix<T>::invert()
 {
     //create a new matrix to store inverted B in
-    M_inv = new T*[this->realCol];
+    T** tmp = new T*[this->realCol];
     for (int i=0;i<this->realCol;i++)
     {
-        M_inv[i] = new T[realRow];
+        tmp[i] = new T[realRow];
     }
     //invert values of matrix
     for (int i=0;i<this->realRow;i++)
     {
         for(int j=0;j<this->realCol;j++)
         {
-            M_inv[j][i] = M[i][j];
+            tmp[j][i] = M[i][j];
         }
     }
+    //delete old matrix
+    this->free();
+    //set new to inverted
+    M = tmp;
+}
+
+template <typename T>
+T* Matrix<T>::getCol(int r) const
+{
+    T* c[this->realCol];
+    for(int i=0;i<this->realCol;i++)
+    {
+        c[i] = &(this->M[r][i]);
+    }
+    return *c;
 }
 
 template <typename T>
@@ -219,7 +206,7 @@ void Matrix<T>::fill(bool randomize)
         {
             if(randomize && (j < this->col && i < this->row))
             { //fill desired space with random numbers
-                this->M[i][j] = (T)(i+j)/2;
+                this->M[i][j] = (T)rand();
             }
             else
             { //fill other space with zeros
@@ -228,3 +215,5 @@ void Matrix<T>::fill(bool randomize)
         }
     }
 }
+
+#endif
