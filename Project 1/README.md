@@ -29,20 +29,19 @@ This project can be built using the command line and calling g++, using the foll
 
 ### Execution
 
-After building the project, you can then run the program by calling
+After building the project, you can then run the program by calling  
 ```./main.o <optional: size, default = 3> <optional: [NO_]CACHE_OPTIMIZATION default = enabled>```.
 
-```size``` referrs to the size of the matrix to be tested
-The optional tag, ```CACHE_OPTIMIZATION``` will optimize cache if entered after size. 
+```size``` referrs to the size of the matrix to be tested. The optional tag, ```CACHE_OPTIMIZATION``` will optimize cache if entered after ```size```. 
 
 ### Examples:
 
-5 x 5 matrix multiplication using cache optimization:
-```./main.o```
-3 x 3 matrix multiplication using cache optimization:
-```./main.o 3 CACHE_OPTIMIZATION```
-4 x 4 matrix multiplication not using cache optimization:
-```./main.o 4 NO_CACHE_OPTIMIZATION```
+5 x 5 matrix multiplication using cache optimization:  
+```./main.o```  
+3 x 3 matrix multiplication using cache optimization:  
+```./main.o 3 CACHE_OPTIMIZATION```  
+4 x 4 matrix multiplication not using cache optimization:  
+```./main.o 4 NO_CACHE_OPTIMIZATION```  
 
 ## Results
 
@@ -54,7 +53,7 @@ The matrix size was varried from 500 to 10000 and tested for each data type. Eac
 
 One of the implimentations coded uses floating point numbers as the type for the object, ```Matrix<T>```. This part utilizes 256 bit register, using AVX SIMD instrucitons.  
 
-Below shows the difference in times (in seconds) between the c++ matrix multiplication, using only normal ```+``` and ```*``` operations, versus using the implimented AVX SIMD instructions.
+Below shows the difference in times (in seconds) between the c++ matrix multiplication, using only normal ```+``` and ```*``` operations, versus using the implimented AVX SIMD instructions, with cache optimization disbaled.
 
 | Matrix Size | Traditional C++ Time | AVX SIMD Time |
 |-------------|----------------------|---------------|
@@ -64,7 +63,7 @@ Below shows the difference in times (in seconds) between the c++ matrix multipli
 | 5000        |      2252.233        |    307.2744   |
 | 10000       |     18208.311        |   2502.9834   |
 
-Additionally, using the #define, ```CACHE_OPTIMIZATION```, the resulting numbers have been observed:
+With ```CACHE_OPTIMIZATION``` enabled:
 
 | Matrix Size | Traditional C++ Time | AVX SIMD Time |
 |-------------|----------------------|---------------|
@@ -76,7 +75,7 @@ Additionally, using the #define, ```CACHE_OPTIMIZATION```, the resulting numbers
 
 ### Fixed point integers
 
-Another implimentation coded uses fixed point unsigned intnumbers as the type for the object, ```Matrix<T>```. This part utilizes 256 bit register, using AVX and AVX2 SIMD instrucitons. 
+Another implimentation coded uses fixed point unsigned intnumbers as the type for the object, ```Matrix<T>```. This part utilizes 256 bit register, using AVX and AVX2 SIMD instrucitons.
 
 Similar to above, the following numbers were observed from testing:
 
@@ -88,7 +87,7 @@ Similar to above, the following numbers were observed from testing:
 | 5000        |       2283.341       |    302.485    |
 | 10000       |      19867.093       |    2457.95    |
 
-Using #define, ```CACHE_OPTIMIZATION```:
+With ```CACHE_OPTIMIZATION``` enabled:
 
 | Matrix Size | Traditional C++ Time | AVX SIMD Time |
 |-------------|----------------------|---------------|
