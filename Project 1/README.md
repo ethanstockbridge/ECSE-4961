@@ -30,7 +30,7 @@ This project can be built using the command line and calling g++, using the foll
 ### Execution
 
 After building the project, you can then run the program by calling  
-```./main.o <optional: size, default = 3> <optional: [NO_]CACHE_OPTIMIZATION default = enabled>```.
+```./main.o <optional: size, default = 5> <optional: [NO_]CACHE_OPTIMIZATION default = enabled>```.
 
 ```size``` referrs to the size of the matrix to be tested. The optional tag, ```CACHE_OPTIMIZATION``` will optimize cache if entered after ```size```. 
 
