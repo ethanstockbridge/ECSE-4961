@@ -5,12 +5,14 @@
  * @brief Matrix class definitions 
  * @date 2022-01-25
  */
-
-
 #ifndef MATRIX_H
 #define MATRIX_H
 
-#define ROW_WIDTH 8
+/**
+ * @brief set row width to be a multiple of 16 since we are using AVX instructions,
+ * these load data in chunks of 8/16
+ */
+#define ROW_WIDTH 16
 
 /**
  * @brief Matrix class 
@@ -64,7 +66,6 @@ public:
      */
     unsigned int getCols() const { return this->col; }
 
-    T* getCol(int r) const;
 
     // Modifiers
     /**
@@ -122,8 +123,8 @@ Matrix<T>::Matrix(unsigned int mrow, unsigned int mcol, bool randomize)
     this->col = mcol;
     // "real" represents the data stored, which is adjusted for intrinsic instructions
     // which require contiguous values of multiples, ROW_WIDTH.
-    this->realRow = mrow + ROW_WIDTH - mrow%ROW_WIDTH;
-    this->realCol = mcol + ROW_WIDTH - mcol%ROW_WIDTH;
+    this->realRow = this->row + ROW_WIDTH - this->row%ROW_WIDTH;
+    this->realCol = this->col + ROW_WIDTH - this->col%ROW_WIDTH;
     // Initilize the matrix with specified size
     this->M = new T*[this->realRow];
     for(unsigned int i=0; i<this->realRow; i++)
@@ -168,14 +169,14 @@ void Matrix<T>::invert()
 {
     //create a new matrix to store inverted B in
     T** tmp = new T*[this->realCol];
-    for (int i=0;i<this->realCol;i++)
+    for (unsigned int i=0;i<this->realCol;i++)
     {
         tmp[i] = new T[realRow];
     }
     //invert values of matrix
-    for (int i=0;i<this->realRow;i++)
+    for (unsigned int i=0;i<this->realRow;i++)
     {
-        for(int j=0;j<this->realCol;j++)
+        for(unsigned int j=0;j<this->realCol;j++)
         {
             tmp[j][i] = M[i][j];
         }
@@ -187,26 +188,15 @@ void Matrix<T>::invert()
 }
 
 template <typename T>
-T* Matrix<T>::getCol(int r) const
-{
-    T* c[this->realCol];
-    for(int i=0;i<this->realCol;i++)
-    {
-        c[i] = &(this->M[r][i]);
-    }
-    return *c;
-}
-
-template <typename T>
 void Matrix<T>::fill(bool randomize)
 {
-    for(int i=0; i < this->realRow; i++)
+    for(unsigned int i=0; i < this->realRow; i++)
     {
-        for(int j=0; j< this->realCol; j++)
+        for(unsigned int j=0; j< this->realCol; j++)
         {
             if(randomize && (j < this->col && i < this->row))
             { //fill desired space with random numbers
-                this->M[i][j] = (T)rand();
+                this->M[i][j] = (T)(rand());
             }
             else
             { //fill other space with zeros

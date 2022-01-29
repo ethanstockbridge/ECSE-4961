@@ -14,9 +14,6 @@
 
 #include "matrix.h"
 
-// Optimization flag from argument in main
-bool CACHE_OPTIMIZATION = false;
-
 /**
  * @brief Matrix multiplication using regular C++ basic matrix multiplication
  * 
@@ -34,28 +31,25 @@ void matrix_multiplication(Matrix<T>& A, Matrix<T>& B, Matrix<T>& C)
         std::cerr<<"Error: Cannot perform matrix multiplication because matrix dimensions do not match"<<std::endl;
         return;
     }
-    int i,j,k;
+    unsigned int i,j,k;
     for (i = 0; i < A.getRows(); i++)
     {
         for (j = 0; j < B.getCols(); j++)
         {
-            if(CACHE_OPTIMIZATION)
+            #ifdef CACHE_OPTIMIZATION
+            T* a = A[i];
+            T* b = B[j];
+            for (k = 0; k < A.getCols(); k++)
             {
-                T* a = A[i];
-                T* b = B[j];
-                for (k = 0; k < A.getCols(); k++)
-                {
-                    C[i][j] += a[k]*b[k];
-                }
+                C[i][j] += a[k]*b[k];
             }
-            else
+            #else
+            C[i][j] = 0;
+            for (k = 0; k < A.getCols(); k++)
             {
-                C[i][j] = 0;
-                for (k = 0; k < A.getCols(); k++)
-                {
-                    C[i][j] += T(A[i][k])*T(B[k][j]);
-                }
+                C[i][j] += T(A[i][k])*T(B[k][j]);
             }
+            #endif
         }
     }
 }
@@ -68,7 +62,7 @@ void matrix_multiplication(Matrix<T>& A, Matrix<T>& B, Matrix<T>& C)
  * @param B Second input matrix
  * @param C Output matrix (A x B = C)
  */
-void SIMD_float_matrix_multiplication(Matrix<float>& A, Matrix<float>& B, Matrix<float>& C)
+void SIMD_matrix_multiplication(Matrix<float>& A, Matrix<float>& B, Matrix<float>& C)
 {
     if( (A.getCols() != B.getRows()) || 
         (C.getCols() != B.getCols()) ||
@@ -80,7 +74,8 @@ void SIMD_float_matrix_multiplication(Matrix<float>& A, Matrix<float>& B, Matrix
     
     unsigned int i,j,k;
     float ans[8];
-    __m256 num1, num2, num3, sum;
+    // __m256 num1, num2;
+    __m256 num3, sum;
 
     float** matrixA = A.getMatrix();
     float** matrixB = B.getMatrix();
@@ -98,10 +93,16 @@ void SIMD_float_matrix_multiplication(Matrix<float>& A, Matrix<float>& B, Matrix
         arow = matrixA[i];
         for (j = 0; j < size2; j++)
         {
-            if(CACHE_OPTIMIZATION)
-                bcol = matrixB[j];
-            else
-                bcol = B.getCol(j);
+            #ifdef CACHE_OPTIMIZATION
+            bcol = matrixB[j];
+            #else
+            float tmp[B.getCols()];
+            for(int i=0;i<B.getRows();i++)
+            {
+                tmp[i] = B[i][j];
+            }
+            bcol = tmp;
+            #endif
 
             sum= _mm256_setzero_ps();  //sets sum to zero
 
@@ -129,9 +130,9 @@ void SIMD_float_matrix_multiplication(Matrix<float>& A, Matrix<float>& B, Matrix
  * @param B Second input matrix
  * @param C Output matrix (A x B = C)
  */
-void SIMD_matrix_multiplication(Matrix<unsigned int>& A, Matrix<unsigned int>& B, Matrix<unsigned int>& C)
+void SIMD_matrix_multiplication(Matrix<short int>& A, Matrix<short int>& B, Matrix<short int>& C)
 {
-    int i,j,k;
+    unsigned int i,j,k;
     if( (A.getCols() != B.getRows()) || 
         (C.getCols() != B.getCols()) ||
         (C.getRows() != A.getRows()) )
@@ -140,50 +141,50 @@ void SIMD_matrix_multiplication(Matrix<unsigned int>& A, Matrix<unsigned int>& B
         return;
     }
 
-    unsigned int** matrixA = A.getMatrix();
-    unsigned int** matrixB = B.getMatrix();
-    unsigned int** matrixC = C.getMatrix();
+    short int** matrixA = A.getMatrix();
+    short int** matrixB = B.getMatrix();
+    short int** matrixC = C.getMatrix();
 
-    const int size1 = A.getRows(); //= C.getRows()
-    const int size2 = B.getCols(); //= C.getCols()
-    const int size3 = A.getCols(); //= B.getRows()
+    const unsigned int size1 = A.getRows(); //= C.getRows()
+    const unsigned int size2 = B.getCols(); //= C.getCols()
+    const unsigned int size3 = A.getCols(); //= B.getRows()
 
-    const unsigned int* arow;
-    const unsigned int* bcol;
+    const short int* arow;
+    const short int* bcol;
 
     // __m256i num1, num2, num3
     __m256i sum;
-    int extract[8];
+    short int extract[16];
 
     for (i = 0; i < size1; i++)
     {
         arow = matrixA[i];
         for (j = 0; j < size2; j++)
         {
-            if(CACHE_OPTIMIZATION)
-                bcol = matrixB[j];
-            else
-                bcol = B.getCol(j);
+            #ifdef CACHE_OPTIMIZATION
+            bcol = matrixB[j];
+            #else
+            short int tmp[B.getCols()];
+            for(int i=0;i<B.getRows();i++)
+            {
+                tmp[i] = B[i][j];
+            }
+            bcol = tmp;
+            #endif
 
             sum= _mm256_setzero_si256();  //sets sum to zero
 
             //multiply accumulate flattened column with flattened row
-            for(k=0; k < size3; k+=8)
-            {                                                               // lower half is described. same occurs for upper half:
-                // num1 = _mm256_loadu_si256((__m256i*)&arow[k+8]);         // load: num1 = [a[3], a[2], a[1], a[0]]
-                // num2 = _mm256_loadu_si256((__m256i*)&bcol[k+8]);         // load: num2 = [b[3], b[2], b[1], b[0]]
-                // num1 = _mm256_mullo_epi32(num1, num2);                   // multiply, store low bits: num3 = [a[3]*b[3],  a[2]*b[2],  a[1]*b[1],  a[0]*b[0]]
-                // sum = _mm256_add_epi32(sum, num1);                       // performs vertical addition with previous values  sum = [prev[3], prev[2], prev[1], prev[0]]
-                
-                // Combine into 1 line for maximum efficiency (don't have to save into variables):
-                sum = _mm256_add_epi32(sum, 
-                        _mm256_mullo_epi32(_mm256_loadu_si256((__m256i*)&arow[k]), 
+            for(k=0; k < size3; k+=16)
+            {
+                sum = _mm256_add_epi16(sum, 
+                        _mm256_mullo_epi16(_mm256_loadu_si256((__m256i*)&arow[k]), 
                                            _mm256_loadu_si256((__m256i*)&bcol[k])));
             }
-            sum= _mm256_hadd_epi32(sum, sum); //horizontally sum; sum = [prev[3]+prev[2] , prev[1]+prev[0] , prev[3]+prev[2] , prev[1]+prev[0]]
-            sum= _mm256_hadd_epi32(sum, sum); //horizontally sum; sum = [prev[3] + prev[2] + prev[1] + prev[0] , ...]
-            _mm256_store_si256((__m256i*)extract, sum);
-            matrixC[i][j] = extract[0] + extract[4]; //save extracted values to matrix
+            sum = _mm256_hadd_epi16(sum,sum); //consolidate sum
+            sum = _mm256_hadd_epi16(sum,sum); //consolidate sum
+            _mm256_storeu_si256((__m256i*)extract, sum); //store and add last numbers together
+            matrixC[i][j] = extract[0]+extract[1]+extract[8]+extract[9]; //save extracted sum to matrix
         }
     }
 }
@@ -203,9 +204,9 @@ void SIMD_matrix_multiplication(Matrix<unsigned int>& A, Matrix<unsigned int>& B
 template <typename T>
 bool same(Matrix<T>& A, Matrix<T>& B)
 {
-    for(int i=0; i<A.getRows(); i++)
+    for(unsigned int i=0; i<A.getRows(); i++)
     {
-        for(int j=0; j<A.getCols(); j++)
+        for(unsigned int j=0; j<A.getCols(); j++)
         {
             if(T(A[i][j]) != T(B[i][j]))
             {
@@ -221,79 +222,49 @@ bool same(Matrix<T>& A, Matrix<T>& B)
  * @brief Main function for comparing the performance of float type using 
  * SIMD instructions compared to standard C++ performance
  * 
+ * @tparam MATRIX_TYPE Type of matrix to be tested (short int / float)
  * @param size Size of the NxN matrix to be tested
  */
-void test_float(unsigned int size)
-{
-    std::cout<<"Testing float matrix-matrix multiplication:"<<std::endl;
-    
-    Matrix<float> A(size, size, true);
+template <typename MATRIX_TYPE>
+void test(unsigned int size)
+{   
+    Matrix<MATRIX_TYPE> A(size, size, true);
+    #ifdef VERBOSE
     std::cout<<"Matrix A:"<<std::endl;
     A.print();
+    #endif
 
-    Matrix<float> B(size, size, true);
+    Matrix<MATRIX_TYPE> B(size, size, true);
+    #ifdef VERBOSE
     std::cout<<"Matrix B:"<<std::endl;
     B.print();
+    #endif
 
     //invert entire matrix before multiplication if cache optimization is allowed
-    if(CACHE_OPTIMIZATION)
-        B.invert(); 
+    #ifdef CACHE_OPTIMIZATION
+    B.invert(); 
+    #endif
 
-    std::cout<<"Standard A x B ="<<std::endl;
-    Matrix<float>  C(size, size, false);
+    Matrix<MATRIX_TYPE> C(size, size, false);
     auto start1 = std::chrono::high_resolution_clock::now();
     matrix_multiplication(A, B, C);
     auto stop1 = std::chrono::high_resolution_clock::now();
-    C.print();
 
-    std::cout<<"SIMD A x B ="<<std::endl;
-    Matrix<float>  C2(size, size, false);
-    auto start2 = std::chrono::high_resolution_clock::now();
-    SIMD_float_matrix_multiplication(A, B, C2);
-    auto stop2 = std::chrono::high_resolution_clock::now();
-    C2.print();
-    auto duration1 = std::chrono::duration_cast<std::chrono::microseconds>(stop1 - start1);
-    auto duration2 = std::chrono::duration_cast<std::chrono::microseconds>(stop2 - start2);
-
-    std::cout<<"Regular c++ matrix multiplication: "<<duration1.count()<<"us"<<std::endl;
-    std::cout<<"SIMD matrix multiplication: "<<duration2.count()<<"us\n"<<std::endl;
-}
-
-/**
- * @brief Main function for comparing the performance of unsigned int type using 
- * SIMD instructions compared to standard C++ performance
- * 
- * @param size Size of the NxN matrix to be tested
- */
-void test_int(unsigned int size)
-{
-	std::cout<<"Testing int matrix-matrix multiplication:"<<std::endl;
-    
-    Matrix<unsigned int> A(size, size, true);
-    std::cout<<"Matrix A:"<<std::endl;
-    A.print();
-
-    Matrix<unsigned int> B(size, size, true);
-    std::cout<<"Matrix B:"<<std::endl;
-    B.print();
-
+    #ifdef VERBOSE
     std::cout<<"Standard A x B ="<<std::endl;
-    Matrix<unsigned int>  C(size, size, false);
-    auto start1 = std::chrono::high_resolution_clock::now();
-    matrix_multiplication(A, B, C);
-    auto stop1 = std::chrono::high_resolution_clock::now();
     C.print();
+    #endif
 
-    //invert entire matrix before multiplication if cache optimization is allowed
-    if(CACHE_OPTIMIZATION)
-        B.invert(); 
-
-    std::cout<<"SIMD A x B ="<<std::endl;
-    Matrix<unsigned int>  C2(size, size, false);
+    Matrix<MATRIX_TYPE> C2(size, size, false);
     auto start2 = std::chrono::high_resolution_clock::now();
     SIMD_matrix_multiplication(A, B, C2);
     auto stop2 = std::chrono::high_resolution_clock::now();
+
+    #ifdef VERBOSE
+    std::cout<<"SIMD A x B ="<<std::endl;
     C2.print();
+    #endif
+
     auto duration1 = std::chrono::duration_cast<std::chrono::microseconds>(stop1 - start1);
     auto duration2 = std::chrono::duration_cast<std::chrono::microseconds>(stop2 - start2);
 
@@ -302,6 +273,13 @@ void test_int(unsigned int size)
 }
 
 
+/**
+ * @brief Main function to perform different type matrix testing
+ * 
+ * @param argc Number of input arguments
+ * @param argv Arguments passed in (argv[1] = matrix size)
+ * @return int 
+ */
 int main(int argc, char* argv[])
 {
     // Set the seed time for random
@@ -309,32 +287,34 @@ int main(int argc, char* argv[])
 
     // Size for N x N matrix multiplication:
     unsigned int size;
-    if(argc>1 && argc<4)
+    if(argc>1)
     {
         size = std::stoi(argv[1]);
-        if(std::string(argv[2]) == "CACHE_OPTIMIZATION")
-        {
-            CACHE_OPTIMIZATION = true;
-        }
-        if(std::string(argv[2]) == "NO_CACHE_OPTIMIZATION")
-        {
-            CACHE_OPTIMIZATION = false;
-        }
     }
     else
     {
         size = 5;
-        CACHE_OPTIMIZATION = true;
     }
 
     std::cout<<"Using matrix size of: "<<size<<std::endl;
 
-    if(CACHE_OPTIMIZATION)
-        std::cout<<"Using cache optimization"<<std::endl;
-    else
-        std::cout<<"Not using cache optimization"<<std::endl;
+    #ifdef CACHE_OPTIMIZATION
+    std::cout<<"Cache optimization enabled"<<std::endl;
+    #else
+    std::cout<<"Cache optimization disabled"<<std::endl;
+    #endif
+
+    #ifdef VERBOSE
+    std::cout<<"Printing matricies enabled"<<std::endl;
+    #else
+    std::cout<<"Printing matricies disabled"<<std::endl;
+    #endif
     std::cout<<std::endl;
 
-    test_float(size);
-    test_int(size);
+    std::cout<<"Testing float matrix-matrix multiplication:"<<std::endl;
+    test<float>(size);
+    std::cout<<"Testing short int matrix-matrix multiplication:"<<std::endl;
+    test<short int>(size);
+
+    return 0;
 }
