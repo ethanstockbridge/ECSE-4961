@@ -1,11 +1,26 @@
+/**
+ * @file main.cpp
+ * @author Ethan Stockbridge (ethanstockbridge@gmail.com)
+ * @author Devan Kidd (jjkidd1245@gmail.com)
+ * @brief Main file for performing c++ ZSTD compression on a single file using
+ * pthread multithreading
+ * @date 2022-02-06
+ */
+
 #include <iostream>
 #include <fstream>
 #include <pthread.h>
-#include "zstd.h"       // Assume installed 
+#include "zstd.h"       // Assume already installed 
 #include <vector>
 #include <set>
-#include <unistd.h>
 
+/**
+ * @brief Compression level for ZSTD usage
+ * 
+ */
+#define COMPRESSION_LEVEL 5
+
+#include "chunk.h"      //Data storage class
 
 /**
  * @brief Number of threads to be created to comrpess data
@@ -17,15 +32,15 @@
  * @brief Size (in bytes) of each chunk to be compressed
  * 
  */
-#define CHUNK_SIZE 16000 //16000bytes = 16kb
+#define CHUNK_SIZE 16000 // 16000 Bytes = 16kB
 
 /**
- * @brief keep only MAX_RAW_CHUNKS amount of chunks available at any given time
- * this greatly reduces the amount of ram used. read in more as needed
+ * @brief keep only MAX_RAW_CHUNKS amount of chunks available at any given time.
+ * This greatly reduces the amount of ram used by reading in more as needed instead
+ * of stockpiling the entire input file.
  * 
  */
-#define MAX_RAW_CHUNKS NUM_WORKERS*2
-
+#define MAX_RAW_CHUNKS NUM_WORKERS*10
 
 //use a thread lock so multiple workers can work from the same bins of jobs
 pthread_mutex_t raw_lock; 
@@ -38,50 +53,67 @@ bool writing_complete = false;
 
 
 /**
- * @brief prototype class for data storage
- * 
- */
-class chunk
-{
-private:
-    char* data; //data of chunk
-    int dataSize; //size of data
-    int compressedDataSize; //size of data
-    char* compressedData; //size of data
-    int id; //nth chunk's number
-
-public:
-    chunk(int mid,char* mdata,int mdataSize) : id(mid),data(mdata),dataSize(mdataSize)
-    {
-        ;
-    }
-    void compress()
-    {
-        // Compress with a thread using zstd
-        size_t const cBuffSize = ZSTD_compressBound(this->dataSize);
-        void* const cBuff = malloc(cBuffSize);
-        size_t const cSize = ZSTD_compress(cBuff, cBuffSize, this->data, this->dataSize, 1);
-        this->compressedData = (char*)cBuff;
-        this->compressedDataSize = cSize;
-    }
-    unsigned int getID() const {return id;}
-    unsigned int getDataSize() const {return dataSize;}
-    char* getData() const {return data;}
-    unsigned int getCompressedDataSize() const {return compressedDataSize;}
-    char* getCompressedData() const {return compressedData;}
-    bool operator< (const chunk &right) const
-    {
-        return this->id < right.id;
-    }
-};
-
-
-/**
  * @brief data storage of raw data and compressed data from worker threads
  * 
  */
 std::set<chunk> compressed; //one chunk per thread
 std::vector<chunk> raw; //one chunk per thread
+
+
+//Forward declaration
+void *threadCompress(void *id);
+void manageChunks(const char* inFilename, const char* outFilename);
+
+
+/**
+ * @brief Main function, responsible for creating worker threads and starting the main 
+ * chunk manager. 
+ * 
+ * @param argc Input argument count
+ * @param argv Input arguments (char)
+ * @return int 
+ */
+int main(int argc, const char** argv)
+{
+    const char* exeName = argv[0];
+
+    if (argc!=3) {
+        std::cout<<"Error: Incorrect arguments"<<std::endl;
+        std::cout<<"Usage: "<<exeName<<" <INPUT FILE> <OUTPUT FILE>"<<std::endl;;
+        return 1;
+    }
+
+    const char* inFilename = argv[1];
+    const char* outFilename = argv[2];
+    
+    //dispatch workers to process chunks:
+    pthread_t threads[NUM_WORKERS];
+    int err;
+    long i;
+
+    for( i = 0; i < NUM_WORKERS; i++ ) {
+        // Create new thread:
+        err = pthread_create(&threads[i], NULL, threadCompress, (void*)i);
+        if (err)
+        {
+            std::cout << "Error: Unable to create thread," << err << std::endl;
+            exit(-1);
+        }
+    }
+
+    //start reading in the file as chunks and write them when workers are done:
+    manageChunks(inFilename, outFilename); 
+
+    for (i = 0; i < NUM_WORKERS; i++) {
+		if (pthread_join(threads[i], NULL) != 0)
+        {
+            printf("ERR join %d\n", i);
+            return 1;
+		}
+	}
+
+    return 0;
+}
 
 
 /**
@@ -90,10 +122,10 @@ std::vector<chunk> raw; //one chunk per thread
  * 
  * @param id Thread's numerical ID
  */
-void *threadTask(void *id)
+void *threadCompress(void *id)
 {
     long myID = (long)id;
-    std::cout << "Thread #" << myID << " starting"<< std::endl;
+    // std::cout << "Thread #" << myID << " starting"<< std::endl;
 
     while(!writing_complete)
     {
@@ -103,6 +135,7 @@ void *threadTask(void *id)
             pthread_mutex_lock(&(raw_lock));
             if(raw.size()>0)
             {
+                // std::cout<<"thread "<<id<<" grabbed chunk"<<std::endl;
                 // start compression on that chunk
                 chunk mychunk = raw[0];
                 raw.erase(raw.begin());
@@ -135,13 +168,24 @@ void *threadTask(void *id)
  */
 void manageChunks(const char* inFilename, const char* outFilename)
 {
-    unsigned int fsize = 0; //total size of read in file
+    unsigned long readSize = 0; //total amount of bytes read in
+    unsigned long writeSize=0; //total amount of bytes written
+    uint chunkWriteOrder=0; //amount of chunks written
+    uint chunksRead=0; //amount of CHUNK_SIZE chunks read in
+    uint chunkSize; //current size of chunk (may differ from CHUNK_SIZE for last chunk)
 
     std::ifstream fin(inFilename);
     std::ofstream fout(outFilename);
-    uint chunksRead=0;
-    uint chunkSize;
-    uint chunksWritten=0;
+
+    //get total file size
+    const auto begin = fin.tellg();
+    fin.seekg (0, std::ios::end);
+    const auto end = fin.tellg();
+    const auto totalFileSize = (end-begin);
+    fin.seekg (0, std::ios::beg); //move back to beginning of file
+
+    std::cout<<"Input file '"<<inFilename<<"' size: "<<totalFileSize<<" Bytes"<<std::endl;
+
 
     while(!reading_complete || !writing_complete)// && writing_complete))
     {
@@ -156,12 +200,15 @@ void manageChunks(const char* inFilename, const char* outFilename)
             {
                 //no more chunks to be read in from the file, stop reading
                 reading_complete=true;
-                std::cout<<"READ COMPLETE"<<std::endl;
+                std::cout<<"File read complete: "<<inFilename<<std::endl;
+                std::cout.flush();
             }
             else
             {   //successfully read in a chunk
-                // std::cout<<"Read in "<<chunkSize<<" bytes from file"<<std::endl;
-                fsize+=chunkSize;
+                std::cout<<"Progress: "<<(int)((100*readSize)/totalFileSize)<<"%\r";
+                std::cout.flush();
+                readSize+=chunkSize;
+                //lock to prevent incorrect read
                 pthread_mutex_lock(&(raw_lock));
                 raw.push_back(chunk(chunksRead,someData,chunkSize));
                 pthread_mutex_unlock(&(raw_lock));
@@ -170,67 +217,23 @@ void manageChunks(const char* inFilename, const char* outFilename)
         }
         if(!writing_complete)
         { 
-            //writing not complete, check for next chunk if it has been compressed yet
-            if((compressed.begin())->getID() == chunksWritten)
+            //writing not complete, check if next in-order chunk has been compressed yet
+            if((compressed.begin())->getID() == chunkWriteOrder)
             {   //next, in-order chunk was added, so write to file now.
                 fout.write(compressed.begin()->getCompressedData(),compressed.begin()->getCompressedDataSize());
-                // fout.write(compressed.begin()->data,compressed.begin()->dataSize);
-                // std::cout<<"Wrote "<<compressed.begin()->getDataSize()<<" bytes to file"<<std::endl;
-                delete compressed.begin()->getData();
-                delete compressed.begin()->getCompressedData();
+                writeSize+=compressed.begin()->getCompressedDataSize();
+                delete[] compressed.begin()->getData();
+                delete[] compressed.begin()->getCompressedData();
                 pthread_mutex_lock(&(compressed_lock));
                 compressed.erase(compressed.begin()); //erase from list
                 pthread_mutex_unlock(&(compressed_lock));
-                chunksWritten+=1;
+                chunkWriteOrder+=1;
             }
-            if(reading_complete && chunksWritten==chunksRead)
-            {   //we reached the last chunk to be written. everything is done now.
-                std::cout<<"WRITE COMPLETE"<<std::endl;
+            if(reading_complete && chunkWriteOrder==chunksRead)
+            {   //we reached the last chunk to be written. everything is done now, we may exit
+                std::cout<<"Output file '"<<outFilename<<"' size: "<<writeSize<<" Bytes"<<std::endl;
                 writing_complete=true; 
             }
         }
     }
 }
-
-
-/**
- * @brief Main function, responsible for creating worker threads and starting the main 
- * chunk manager. 
- * 
- * @param argc Input argument count
- * @param argv Input arguments (char)
- * @return int 
- */
-int main(int argc, const char** argv)
-{
-    const char* exeName = argv[0];
-
-    if (argc!=3) {
-        std::cout<<"Error: Incorrect arguments"<<std::endl;
-        std::cout<<"Usage: "<<exeName<<" <INPUT FILE> <OUTPUT FILE>"<<std::endl;;
-        return 1;
-    }
-
-    const char* inFilename = argv[1];
-    const char* outFilename = argv[2];
-    
-    //dispatch workers to process chunks:
-    pthread_t threads[NUM_WORKERS];
-    int err;
-    long i;
-
-    for( i = 0; i < NUM_WORKERS; i++ ) {
-        // Create new thread:
-        err = pthread_create(&threads[i], NULL, threadTask, (void*)i);
-        if (err) {
-            std::cout << "Error:unable to create thread," << err << std::endl;
-            exit(-1);
-        }
-    }
-
-    //start reading in the file as chunks and write them when workers are done:
-    manageChunks(inFilename, outFilename); 
-
-    return 0;
-}
-
