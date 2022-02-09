@@ -33,7 +33,9 @@ After building the project, you can then run the program by calling
 
 ### Example:
 
-Default testing 5 x 5 matrix multiplication:  
+Build with 3 workers:   
+```g++  -g *.cpp -pthread -lzstd -o ./main.o -DNUM_WORKERS=3```   
+Testing on input file `input.zip`, outputting as `output.zst`   
 ```./main.o input.zip output.zst```  
 
 ## Results
@@ -42,7 +44,7 @@ Default testing 5 x 5 matrix multiplication:
 
 The worker count was varied from 1 to 10 and tested to find the amount of time taken to compress a specified input file. Each trial was tested multiple times to ensure consistency and an average of all samples was taken. All other computer programs were closed to prevent inconsistent CPU usage.
 
-All testing was performed on: Intel i7-8750h 6 core, 12 logical processors
+Testing was performed on: Intel i7-8750h 6 core, 12 logical processors
 
 ### Input: 256MB random byte file
 
