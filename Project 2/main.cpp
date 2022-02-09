@@ -11,6 +11,8 @@
 #include <fstream>
 #include <pthread.h>
 #include "zstd.h"       // Assume already installed 
+#include <chrono> // For timing
+
 #include <vector>
 #include <set>
 
@@ -18,7 +20,7 @@
  * @brief Compression level for ZSTD usage
  * 
  */
-#define COMPRESSION_LEVEL 5
+#define COMPRESSION_LEVEL 50
 
 #include "chunk.h"      //Data storage class
 
@@ -26,13 +28,13 @@
  * @brief Number of threads to be created to comrpess data
  * 
  */
-#define NUM_WORKERS 3
+// #define NUM_WORKERS 3
 
 /**
  * @brief Size (in bytes) of each chunk to be compressed
  * 
  */
-#define CHUNK_SIZE 16000 // 16000 Bytes = 16kB
+#define CHUNK_SIZE 16*1024 // 16KB
 
 /**
  * @brief keep only MAX_RAW_CHUNKS amount of chunks available at any given time.
@@ -91,6 +93,8 @@ int main(int argc, const char** argv)
     int err;
     long i;
 
+    std::cout << "Using " << NUM_WORKERS << " threads for compression" << std::endl;
+
     for( i = 0; i < NUM_WORKERS; i++ ) {
         // Create new thread:
         err = pthread_create(&threads[i], NULL, threadCompress, (void*)i);
@@ -102,16 +106,13 @@ int main(int argc, const char** argv)
     }
 
     //start reading in the file as chunks and write them when workers are done:
+    auto start = std::chrono::high_resolution_clock::now();
     manageChunks(inFilename, outFilename); 
+    auto stop = std::chrono::high_resolution_clock::now();
 
-    for (i = 0; i < NUM_WORKERS; i++) {
-		if (pthread_join(threads[i], NULL) != 0)
-        {
-            printf("ERR join %d\n", i);
-            return 1;
-		}
-	}
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
 
+    std::cout<<"Compression took "<<duration.count()*1e-6<<"s\n"<<std::endl;
     return 0;
 }
 
@@ -184,7 +185,13 @@ void manageChunks(const char* inFilename, const char* outFilename)
     const auto totalFileSize = (end-begin);
     fin.seekg (0, std::ios::beg); //move back to beginning of file
 
-    std::cout<<"Input file '"<<inFilename<<"' size: "<<totalFileSize<<" Bytes"<<std::endl;
+    if(totalFileSize==0)
+    {
+        std::cout << "Error: Input file size cannot be zero" << std::endl;
+        exit(1);
+    }
+
+    std::cout << "Input file '" << inFilename << "' size: " << totalFileSize << " Bytes" << std::endl;
 
 
     while(!reading_complete || !writing_complete)// && writing_complete))
@@ -200,12 +207,12 @@ void manageChunks(const char* inFilename, const char* outFilename)
             {
                 //no more chunks to be read in from the file, stop reading
                 reading_complete=true;
-                std::cout<<"File read complete: "<<inFilename<<std::endl;
+                std::cout << "Finishing up writing compressed output file now..." << "\r";
                 std::cout.flush();
             }
             else
             {   //successfully read in a chunk
-                std::cout<<"Progress: "<<(int)((100*readSize)/totalFileSize)<<"%\r";
+                std::cout << "\33[2K" << "Progress: " << (int)((100*readSize)/totalFileSize) << "%\r";
                 std::cout.flush();
                 readSize+=chunkSize;
                 //lock to prevent incorrect read
@@ -231,7 +238,9 @@ void manageChunks(const char* inFilename, const char* outFilename)
             }
             if(reading_complete && chunkWriteOrder==chunksRead)
             {   //we reached the last chunk to be written. everything is done now, we may exit
-                std::cout<<"Output file '"<<outFilename<<"' size: "<<writeSize<<" Bytes"<<std::endl;
+                //clear line "finishing up writing ..." and output file name and size
+                std::cout << "\33[2K" << "Output file '" << outFilename << "' size: " << writeSize << " Bytes" << std::endl;
+                std::cout.flush();
                 writing_complete=true; 
             }
         }
