@@ -1,4 +1,4 @@
-# Project 1: ZSTD Compression Multithreading
+# Project 2: ZSTD Compression Multithreading
 
 ## Background
 
