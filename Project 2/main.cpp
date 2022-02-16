@@ -20,21 +20,19 @@
  * @brief Compression level for ZSTD usage
  * 
  */
+#ifndef COMPRESSION_LEVEL
 #define COMPRESSION_LEVEL 50
+#endif
 
 #include "chunk.h"      //Data storage class
-
-/**
- * @brief Number of threads to be created to comrpess data
- * 
- */
-// #define NUM_WORKERS 3
 
 /**
  * @brief Size (in bytes) of each chunk to be compressed
  * 
  */
+#ifndef CHUNK_SIZE
 #define CHUNK_SIZE 16*1024 // 16KB
+#endif
 
 /**
  * @brief keep only MAX_RAW_CHUNKS amount of chunks available at any given time.
@@ -42,7 +40,7 @@
  * of stockpiling the entire input file.
  * 
  */
-#define MAX_RAW_CHUNKS NUM_WORKERS*10
+unsigned int MAX_RAW_CHUNKS = 0;
 
 //use a thread lock so multiple workers can work from the same bins of jobs
 pthread_mutex_t raw_lock; 
@@ -79,14 +77,19 @@ int main(int argc, const char** argv)
 {
     const char* exeName = argv[0];
 
-    if (argc!=3) {
+    if (argc!=4) {
         std::cout<<"Error: Incorrect arguments"<<std::endl;
-        std::cout<<"Usage: "<<exeName<<" <INPUT FILE> <OUTPUT FILE>"<<std::endl;;
+        std::cout<<"Usage: "<<exeName<<" <NUM WORKERS> <INPUT FILE> <OUTPUT FILE>"<<std::endl;;
         return 1;
     }
 
-    const char* inFilename = argv[1];
-    const char* outFilename = argv[2];
+    const char* numWorkers = argv[1];
+    unsigned int NUM_WORKERS = std::stoi(argv[1]);
+    const char* inFilename = argv[2];
+    const char* outFilename = argv[3];
+
+    //allocate 10*number of worker threads of raw chunks available to all workers
+    MAX_RAW_CHUNKS = NUM_WORKERS*10;
     
     //dispatch workers to process chunks:
     pthread_t threads[NUM_WORKERS];

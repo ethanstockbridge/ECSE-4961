@@ -9,34 +9,30 @@ With multithreading, when the CPU is doing operations such as large mathematical
 
 Compression algorithms perform intensive algorithms to achieve a high compression on the output file, which may take a long time to complete. To accelerate this, we will be using seperate threads to split the work and accelerate the compression. 
 
-## Implementation
-
-### Methodology
+## Methodology
 
 This program uses `pthread` as the library to impliment threading into our C++ program. A configurable amount of threads ("workers") will be launched from the main thread. Each "worker" thread will perform the ZSTD compression on chunks from the file (`default = 16kB`.) The main thread will read in a configurable amount of limited data from the file. Every time a worker thread takes a chunk, more data will be read in. This method allows a smaller usage of ram, since the program does not need to keep the whole input file in memory. The main thread is also responsible for writing the resulting data every time compression is complete. All together, the progam will read in the input file, workers will compress chunks, and then this data will be written to the output data.
 
 
-## Installation and Execution
-
-### Build
+## Build process
 
 This project can be built using the command line and calling g++, using the following line:
 
-```g++  -g *.cpp -pthread -lzstd -o ./main.o -DNUM_WORKERS=<worker thread count>```  
+```g++  -g *.cpp -pthread -lzstd -o ./main.o```
 
-The DNUM_WORKERS tag refers to the amount of worker threads that will be created to perform compression on the chunks.
+Additional optional build tags: ```-DCOMPRESSION_LEVEL=N -DCHUNK_SIZE=M```  
+Where N and M are integers.  
+The DCOMPRESSION_LEVEL (default 50) tag refers to the compression level to be used for ZSTD compression.  
+The DCHUNK_SIZE (default 16KB) tag refers to the size of each chunk that will be taken from the input file, to then be compressed and added to the output file.
 
-### Execution
+## Execution
 
 After building the project, you can then run the program by calling  
-```./main.o <input file> <output file>```  
+```./main.o <thread count> <input file> <output file>```  
 
-### Example:
-
-Build with 3 workers:   
-```g++  -g *.cpp -pthread -lzstd -o ./main.o -DNUM_WORKERS=3```   
-Testing on input file `input.zip`, outputting as `output.zst`   
-```./main.o input.zip output.zst```  
+## Example:
+Testing on input file `input.zip`, outputting as `output.zst`, using 3 threads for compression:  
+```./main.o 3 input.zip output.zst```  
 
 ## Results
 
@@ -44,11 +40,28 @@ Testing on input file `input.zip`, outputting as `output.zst`
 
 The worker count was varied from 1 to 10 and tested to find the amount of time taken to compress a specified input file. Each trial was tested multiple times to ensure consistency and an average of all samples was taken. All other computer programs were closed to prevent inconsistent CPU usage.
 
-Testing was performed on: Intel i7-8750h 6 core, 12 logical processors
+All testing was performed on: Intel i7-8750h 6 core, 12 logical processor CPU
+
+### Input: [Silesia Corpus](http://sun.aei.polsl.pl/~sdeor/index.php?page=silesia) Uncompressed Zip file
+
+Build specifications:   `COMPRESSION_LEVEL: 50, CHUNK_SIZE: 16KB`
+
+This data set is composed of multiple well-known files supplied by the [Silesia Corpus](http://sun.aei.polsl.pl/~sdeor/index.php?page=silesia), totaling in at ~202MB with 12 files. An uncompressed ZIP file was created from the above and used as input for this test.
+
+| Worker threads | Program run time | 
+|----------------|------------------|
+| 1              |     65.025s     |
+| 2              |     33.827s     |
+| 3              |     23.174s     |
+| 4              |     18.704s     |
+| 5              |     16.534s     |
+| 6              |     14.979s     |
+| 8              |     12.746s     |
+| 10             |     11.671s     |
 
 ### Input: 256MB random byte file
 
-Build specifications:   `COMPRESSION_LEVEL: 50, CHUNK_SIZE: 16KB`
+Build specifications: `COMPRESSION_LEVEL: 50, CHUNK_SIZE: 16KB`
 
 This input file is composed of 256MB of random bytes.
 Below shows the different times (in seconds) between the ZSTD compression on the 256MB input file.
@@ -64,6 +77,7 @@ Below shows the different times (in seconds) between the ZSTD compression on the
 | 8              |     3.395s     |
 | 10             |     3.148s     |
 
+
 ## Conclusion
 
-As noted by the results above, utilizing threading to perform compression on only chunks of the input file greatly increased throughput of ZSTD compression. This allows the CPU to procress more commands while some of the threads are doing seperate tasks such as reading/writing from memory. Enabling threading increases paralleism in the work able to be done by separate thread tasks, thus improving the amount of time required to compress a single file.
+As noted by the results above, utilizing threading to perform compression on only chunks of the input file greatly increased throughput of ZSTD compression. Using more worker threads allowed the compression to take as little as 18% of the original time to compress. Multithreading allows the CPU to procress more commands while other threads may be doing seperate I/O tasks such as reading/writing from memory. This process increases paralleism, allowing more work to be done by each thread task, decreasing the amount of time required to compress a single file.
