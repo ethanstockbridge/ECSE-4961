@@ -11,19 +11,19 @@ Compression algorithms perform intensive algorithms to achieve a high compressio
 
 ## Methodology
 
-This program uses `pthread` as the library to impliment threading into our C++ program. A configurable amount of threads ("workers") will be launched from the main thread. Each "worker" thread will perform the ZSTD compression on chunks from the file (`default = 16kB`.) The main thread will read in a configurable amount of limited data from the file. Every time a worker thread takes a chunk, more data will be read in. This method allows a smaller usage of ram, since the program does not need to keep the whole input file in memory. The main thread is also responsible for writing the resulting data every time compression is complete. All together, the progam will read in the input file, workers will compress chunks, and then this data will be written to the output data.
+This program uses linux's `pthread` library to impliment threading into our C++ program. A configurable amount of threads ("workers") will be launched from the main thread. Each "worker" thread will perform the ZSTD compression on chunks from the file (`default = 16kB`.) The main thread will read in an initial amount of data from the file. Every time a worker thread takes a chunk, more data will be read in. This method allows more efficient usage of RAM, since the program does not need to keep the whole input file in memory upon starting. The main thread is also responsible for writing the resulting data every time compression is complete. In summary, the progam will read in the input file, multiple worker threads will compress chunks, and then this data will be written to the output file.
 
 
 ## Build process
 
-This project can be built using the command line and calling g++, using the following line:
+This project will not work on windows due to the pthread dependancy, so be sure to build on a linux OS. It is also required that you already have the ZSTD library installed.  
+To compile, use the following line:  
 
 ```g++  -g *.cpp -pthread -lzstd -o ./main.o```
 
-Additional optional build tags: ```-DCOMPRESSION_LEVEL=N -DCHUNK_SIZE=M```  
-Where N and M are integers.  
-The DCOMPRESSION_LEVEL (default 50) tag refers to the compression level to be used for ZSTD compression.  
-The DCHUNK_SIZE (default 16KB) tag refers to the size of each chunk that will be taken from the input file, to then be compressed and added to the output file.
+### Additional optional build options
+```-DCOMPRESSION_LEVEL=N``` (default 50) tag refers to the compression level to be used for ZSTD compression.  
+```-DCHUNK_SIZE=M``` (default 16KB) tag refers to the size of each chunk that will be taken from the input file, to then be compressed and added to the output file.
 
 ## Execution
 
@@ -38,15 +38,15 @@ Testing on input file `input.zip`, outputting as `output.zst`, using 3 threads f
 
 ### Testing procedure 
 
-The worker count was varied from 1 to 10 and tested to find the amount of time taken to compress a specified input file. Each trial was tested multiple times to ensure consistency and an average of all samples was taken. All other computer programs were closed to prevent inconsistent CPU usage.
+The worker count was varied from 1 to 10 and project execution was timed to compress a specified input file. Each trial was tested multiple times to ensure consistency and an average of all samples was taken. All other computer programs were closed to prevent inconsistent CPU usage.
 
 All testing was performed on: Intel i7-8750h 6 core, 12 logical processor CPU
 
-### Input: [Silesia Corpus](http://sun.aei.polsl.pl/~sdeor/index.php?page=silesia) Uncompressed Zip file
+### Input 1: [Silesia Corpus](http://sun.aei.polsl.pl/~sdeor/index.php?page=silesia)
 
 Build specifications:   `COMPRESSION_LEVEL: 50, CHUNK_SIZE: 16KB`
 
-This data set is composed of multiple well-known files supplied by the [Silesia Corpus](http://sun.aei.polsl.pl/~sdeor/index.php?page=silesia), totaling in at ~202MB with 12 files. An uncompressed ZIP file was created from the above and used as input for this test.
+This data set is composed of multiple well-known files supplied by the [Silesia Corpus](http://sun.aei.polsl.pl/~sdeor/index.php?page=silesia), totaling in at ~202MB with 12 files. An uncompressed ZIP file was created from the collection and used as input for this test. The execution times were recorded as follows:
 
 | Worker threads | Program run time | 
 |----------------|------------------|
@@ -59,12 +59,11 @@ This data set is composed of multiple well-known files supplied by the [Silesia 
 | 8              |     12.746s     |
 | 10             |     11.671s     |
 
-### Input: 256MB random byte file
+### Input 2: 256MB random byte file
 
 Build specifications: `COMPRESSION_LEVEL: 50, CHUNK_SIZE: 16KB`
 
-This input file is composed of 256MB of random bytes.
-Below shows the different times (in seconds) between the ZSTD compression on the 256MB input file.
+This input file is composed of 256MB of random bytes, made with the program, ```file_gen.py```. Below shows the different times (in seconds) of the ZSTD compression on the 256MB input file with varying workers.
 
 | Worker threads | Program run time | 
 |----------------|------------------|
@@ -77,7 +76,6 @@ Below shows the different times (in seconds) between the ZSTD compression on the
 | 8              |     3.395s     |
 | 10             |     3.148s     |
 
-
 ## Conclusion
 
-As noted by the results above, utilizing threading to perform compression on only chunks of the input file greatly increased throughput of ZSTD compression. Using more worker threads allowed the compression to take as little as 18% of the original time to compress. Multithreading allows the CPU to procress more commands while other threads may be doing seperate I/O tasks such as reading/writing from memory. This process increases paralleism, allowing more work to be done by each thread task, decreasing the amount of time required to compress a single file.
+As noted by the results above, utilizing threading to perform compression on chunks of the input file greatly increased throughput of the overall file compression. Using more worker threads allowed the compression to take as little as 18% of the original time to compress. Multithreading allows the CPU to procress more commands while other threads may be doing seperate I/O tasks such as reading/writing from memory. This process increases paralleism, allowing more work to be done by each thread task, decreasing the amount of time required to compress a single file, as we have seen in the results.

@@ -17,7 +17,7 @@
 #include <set>
 
 /**
- * @brief Compression level for ZSTD usage
+ * @brief Compression level for ZSTD usage. Default 50
  * 
  */
 #ifndef COMPRESSION_LEVEL
@@ -27,7 +27,7 @@
 #include "chunk.h"      //Data storage class
 
 /**
- * @brief Size (in bytes) of each chunk to be compressed
+ * @brief Size (in bytes) of each chunk to be compressed. Default 16KB
  * 
  */
 #ifndef CHUNK_SIZE
@@ -36,21 +36,19 @@
 
 /**
  * @brief keep only MAX_RAW_CHUNKS amount of chunks available at any given time.
- * This greatly reduces the amount of ram used by reading in more as needed instead
- * of stockpiling the entire input file.
+ * This reduces the amount of RAM used by reading in more chunks as needed 
+ * instead of reading in the entire input file all at once.
  * 
  */
 unsigned int MAX_RAW_CHUNKS = 0;
 
-//use a thread lock so multiple workers can work from the same bins of jobs
+// use a thread lock so multiple workers can work from the same bin 
 pthread_mutex_t raw_lock; 
 pthread_mutex_t compressed_lock; 
 
-
-//flags to indicate status of work
+//flags to indicate status of main thread 
 bool reading_complete = false;
 bool writing_complete = false;
-
 
 /**
  * @brief data storage of raw data and compressed data from worker threads
@@ -60,7 +58,7 @@ std::set<chunk> compressed; //one chunk per thread
 std::vector<chunk> raw; //one chunk per thread
 
 
-//Forward declaration
+// Forward declaration
 void *threadCompress(void *id);
 void manageChunks(const char* inFilename, const char* outFilename);
 
