@@ -3,10 +3,10 @@
 MLC is a software package from Intel that is used to measure memory latncies and bandwidth and how they change with an increasing load on the system. FIO is a software package that thests the I/O of a system with many different variables to change. Both of these programs will be used to perfrom experiments on our memory and storage devices. As the data will show, as the memory or storage acess queue depth is increased, the storage devices will achieve higher resource utilization and higher throughput, but the latency will be longer.
 
 ### Environment
-|  | CPU   | RAM    | SSD |
-| :-----| :-------------:    | :-------------:     | :----:     |
-| System 1 | Ryzen 5 3600X  |       16G DDR4, Part #: CMK16GX4M2B3200C16W          |    Samsung 970 Evo 1TB M.2 NVMe   |
-| System 2 |       Intel Core i7 8550U          |          8G DDR4, Par #: HMAA51S6AMR6N-UH          |     Samsung 256G NVMe PCIe Internal SSD   |
+|           | CPU                  | RAM                                       | SSD                                     |
+| :-----    | :-------------:      | :-------------:                           | :----:                                  |
+| System 1  | Ryzen 5 3600X        | 16G DDR4, Part #: CMK16GX4M2B3200C16W     |    Samsung 970 Evo 1TB M.2 NVMe         |
+| System 2  | Intel Core i7 8550U  | 8G DDR4, Par #: HMAA51S6AMR6N-UH          |     Samsung 256G NVMe PCIe Internal SSD |
 
 ### Results
 #### MLC Testing
@@ -433,3 +433,5 @@ MLC is a software package from Intel that is used to measure memory latncies and
 
 
 ### Conclusion
+Based off the testing performed on the memory and storage devices, there is a clear performance difference in reading versus writing intensity, data access size, and throughput versus latency. 
+
