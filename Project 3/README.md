@@ -430,7 +430,7 @@ MLC is a software package from Intel that is used to measure memory latncies and
 |         1000        |      55.5k            | 
 
 ### Analysis
-![System 1 Read vs Write Latency](/Images/Inject-Delay-vs-Latency-for-System-1.PNG)
+![System 1 Read vs Write Latency](https://github.com/ethanstockbridge/ECSE-4961/blob/main/Project%203/Images/Inject-Delay-vs-Latency-for-System-1.PNG)
 ![Test](Inject-Delay-vs-Latency-for-System-1.PNG)
 
 ### Conclusion
