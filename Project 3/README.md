@@ -13,8 +13,10 @@ MLC is a software package from Intel that is used to measure memory latncies and
 
 ##### System 1 Results (Desktop)
 The command or file used to run the tests will be displayed at the top of each table.
+
 [Read vs. Write Intensity]
 [100% Read]
+
 `mlc --loaded_latency -R`
 | Inject Delay    | Latency (ns)    | Bandwidth (MB/sec) |
 | :-------------:    | :-------------:     |:----:     |
@@ -39,6 +41,7 @@ The command or file used to run the tests will be displayed at the top of each t
 |         20000       |         106         |     860  |
 
 [1 Read, 1 Write]
+
 `mlc --loaded_latency -W5`
 | Inject Delay    | Latency (ns)    | Bandwidth (MB/sec) |
 | :-------------:    | :-------------:     |:----:     |
@@ -63,6 +66,7 @@ The command or file used to run the tests will be displayed at the top of each t
 |         20000       |         112         |     1085  |
 
 [100% Write]
+
 `mlc --loaded_latency -W6`
 | Inject Delay    | Latency (ns)    | Bandwidth (MB/sec) |
 | :-------------:    | :-------------:     |:----:     |
@@ -87,6 +91,7 @@ The command or file used to run the tests will be displayed at the top of each t
 |         20000       |         107         |     660  |
 
 [Data Access Size B2500]
+
 `mlc --loaded_latency -b2500`
 | Inject Delay   | Latency (ns)    | Bandwidth (MB/sec) |
 | :-------------:| :-------------: |:----:              |
@@ -111,6 +116,7 @@ The command or file used to run the tests will be displayed at the top of each t
  | 20000 | 115.08 |    1068.4 |
 
 [Data Access Size B500]
+
 `mlc --loaded_latency -b500`
 | Inject Delay   | Latency (ns)    | Bandwidth (MB/sec) |
 | :-------------:| :-------------: |:----:              |
@@ -135,6 +141,7 @@ The command or file used to run the tests will be displayed at the top of each t
  | 20000 | 122.62 |    1030.9 |
 
 [Data Access Size B100]
+
 `mlc --loaded_latency -b100`
 | Inject Delay   | Latency (ns)    | Bandwidth (MB/sec) |
 | :-------------:    | :-------------:     |:----:     |
@@ -159,6 +166,7 @@ The command or file used to run the tests will be displayed at the top of each t
 | 20000 | 126.53 |    1009.3 |
  
 [Throughput vs. Latency]
+
 ```
 		mlc --loaded_latency -d0
 		mlc --loaded_latency -d2000
@@ -177,6 +185,7 @@ The command or file used to run the tests will be displayed at the top of each t
 		mlc --loaded_latency -d28000
 		mlc --loaded_latency -d30000
   ```
+  
 | Inject Delay   | Latency (ns)    | Bandwidth (MB/sec) |
 | :-------------:    | :-------------:     |:----:     |
 | 00000 | 888.61  |  34029.0 |
@@ -200,7 +209,9 @@ The command or file used to run the tests will be displayed at the top of each t
 ##### System 2 Results (Laptop)
 [Read vs. Write Intensity]
 [Read Only]
+
 `mlc --loaded_latency -R`
+
 | Inject Delay   | Latency (ns)    | Bandwidth (MB/sec) |
 | :-------------:    | :-------------:     |:----:     |
 |       0          |       473          |    11089   |
@@ -224,7 +235,9 @@ The command or file used to run the tests will be displayed at the top of each t
 |        20000      |         146         |     507  |
 
 [50% Read and Write]
+
 `mlc --loaded_latency -W5`
+
 | Inject Delay   | Latency (ns)    | Bandwidth (MB/sec) |
 | :-------------:    | :-------------:     |:----:     |
 |       0          |       740          |    13057   |
@@ -248,7 +261,9 @@ The command or file used to run the tests will be displayed at the top of each t
 |        20000      |         92         |     846  |
 
 [Write Only]
+
 `mlc --loaded_latency -W6`
+
 | Inject Delay   | Latency (ns)    | Bandwidth (MB/sec) |
 | :-------------:    | :-------------:     |:----:     |
 |       0          |       595          |    13855   |
@@ -272,7 +287,9 @@ The command or file used to run the tests will be displayed at the top of each t
 |        20000      |         94         |     698  |
 
 [Data Access Size B2500]
+
 `mlc --loaded_latency -b2500`
+
 | Inject Delay   | Latency (ns)    | Bandwidth (MB/sec) |
 | :-------------:    | :-------------:     |:----:     |
 |00000 | 395.01  |  13281.2 |
@@ -296,7 +313,9 @@ The command or file used to run the tests will be displayed at the top of each t
 |  20000  | 18.60   |  3632.1  |
 
 [Data Access Size B500]
+
 `mlc --loaded_latency -b500`
+
 | Inject Delay   | Latency (ns)    | Bandwidth (MB/sec) |
 | :-------------:    | :-------------:     |:----:     |
 | 00000  | 21.96 |  128707.8 |
@@ -321,7 +340,9 @@ The command or file used to run the tests will be displayed at the top of each t
 
 
 [Data Access Size B100]
+
 `mlc --loaded_latency -b100`
+
 | Inject Delay   | Latency (ns)    | Bandwidth (MB/sec) |
 | :-------------:    | :-------------:     |:----:     |
 |  00000 |   5.22 |  281787.0 |
@@ -345,7 +366,26 @@ The command or file used to run the tests will be displayed at the top of each t
 |  20000 |   7.12 |    9122.2 |
  
  
-[Throughput vs. Latency] 
+[Throughput vs. Latency]
+
+```		mlc --loaded_latency -d0
+		mlc --loaded_latency -d2000
+		mlc --loaded_latency -d4000
+		mlc --loaded_latency -d6000
+		mlc --loaded_latency -d8000
+		mlc --loaded_latency -d10000
+		mlc --loaded_latency -d12000
+		mlc --loaded_latency -d14000
+		mlc --loaded_latency -d16000
+		mlc --loaded_latency -d18000
+		mlc --loaded_latency -d20000
+		mlc --loaded_latency -d22000
+		mlc --loaded_latency -d24000
+		mlc --loaded_latency -d26000
+		mlc --loaded_latency -d28000
+		mlc --loaded_latency -d30000 
+```
+
 | Inject Delay   | Latency (ns)    | Bandwidth (MB/sec) |
 | :-------------:    | :-------------:     |:----:     |
 | 00000 | 248.30  |  16144.0 |
@@ -368,6 +408,9 @@ The command or file used to run the tests will be displayed at the top of each t
 #### FIO Testing
 ##### System 1 Results
 [Read vs. Write Intensity]
+
+`fio readWrite.fio`
+
 | Percentage Read    | Percentage Write    | IOPS Read | IOPS Write |
 | :-------------:    | :-------------:     |:----:     | :---:      |
 |        0%          |       100%          |    Null   | 2266       |
@@ -383,6 +426,9 @@ The command or file used to run the tests will be displayed at the top of each t
 |         100%       |         0%          |     2269  | Null       |
 
 [Data Access Size For Read]
+
+`fio readDataSize.fio`
+
 | Block Size         |          IOPS       | 
 | :-------------:    | :-------------:     |
 |       4k          |       6714          |   
@@ -394,6 +440,9 @@ The command or file used to run the tests will be displayed at the top of each t
 |       256k          |         493         |
 
 [Data Access Size For Write]
+
+`fio writeDataSize.fio`
+
 | Block Size         |          IOPS       | 
 | :-------------:    | :-------------:     |
 |       4k          |       7311          |   
@@ -405,6 +454,9 @@ The command or file used to run the tests will be displayed at the top of each t
 |       256k          |         958         |
 
 [Throughput vs. Latency]
+
+`fio lataencyTest.fio`
+
 | Latency (ms)         |          IOPS       | 
 | :-------------:    | :-------------:     |
 |       50          |       5532          |   
@@ -415,6 +467,9 @@ The command or file used to run the tests will be displayed at the top of each t
 
 ##### System 2 Results
 [Read vs. Write Intensity]
+
+`fio readWrite.fio`
+
 | Percentage Read    | Percentage Write    | IOPS Read | IOPS Write |
 | :-------------:    | :-------------:     |:----:     | :---:      |
 |        0%          |       100%          |    Null   | 109k       |
@@ -430,6 +485,9 @@ The command or file used to run the tests will be displayed at the top of each t
 |         100%       |         0%          |     112k  | Null       |
 
 [Data Access Size For Read]
+
+`fio readDataSize.fio`
+
 | Block Size         |          IOPS       | 
 | :-------------:    | :-------------:     |
 |       4k          |       117k          |   
@@ -441,6 +499,9 @@ The command or file used to run the tests will be displayed at the top of each t
 |       256k          |         14.6k         |
 
 [Data Access Size For Write]
+
+`fio writeDataSize.fio`
+
 | Block Size         |          IOPS       | 
 | :-------------:    | :-------------:     |
 |       4k          |       103k          |   
@@ -452,6 +513,9 @@ The command or file used to run the tests will be displayed at the top of each t
 |       256k          |         11.6k         |
 
 [Throughput vs. Latency]
+
+`fio latencyTest.fio`
+
 | Latency (ms)         |          IOPS       | 
 | :-------------:    | :-------------:     |
 |       50          |       44.9k          |   
@@ -496,5 +560,5 @@ When the block size increases, the IOPS of read and write decrease at an exponen
 The graphs show that IOPS increases slightly as the latnecy is increased for both graphs.
 
 ### Conclusion
-Based off the testing performed on the memory and storage devices, there is a clear performance difference in reading versus writing intensity, data access size, and throughput versus latency. 
+Based off the testing performed on the memory and storage devices, there is a clear performance difference in reading versus writing intensity, data access size, and throughput versus latency. As we discussed in calss, as the memory/storage access queue depth increases, the memory/storage devices will achieve higher resource utilization and higher throughput, but the latency will be longer.
 
