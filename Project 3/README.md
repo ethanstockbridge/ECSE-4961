@@ -431,14 +431,33 @@ MLC is a software package from Intel that is used to measure memory latncies and
 
 ### Analysis
 All data from above as has been aggregated into graphs to better understand the different tests.
-
+#### Testing from MLC
 ![System 1 Read vs Write Latency](https://github.com/ethanstockbridge/ECSE-4961/blob/main/Project%203/Images/Inject-Delay-vs-Latency-for-System-1.PNG)
 ![System 2 Read vs Write Latency](https://github.com/ethanstockbridge/ECSE-4961/blob/main/Project%203/Images/Inject%20Delay%20vs%20Latency%20for%20System%202.PNG)
 
 From the graph for system 1 it can be seen that at lower inject delays, writing has the highest latency and having a mix of reads and writes has the lowest latency. As inject delay gets larger than 2000, having a mix of reads and writes has the most latency while writes have the lowest latency. 
 The graph for system 2 does not reflect the same data that system 1 had. The inverse appears to happen for system 2 with the exception of the mixed read and write data. 
 
+![System 1 Data Access Size](https://github.com/ethanstockbridge/ECSE-4961/blob/main/Project%203/Images/Data-Access-Size-for-System-1.PNG)
+![System 2 Data Access Size](https://github.com/ethanstockbridge/ECSE-4961/blob/main/Project%203/Images/Data-Access-Size-for-System-2.PNG)
+The graphs for data access size both show that the as the data access size gets lower, the higher the bandwidth which is consistent with what we learned in class.
 
+![System 1 Throughput vs. Latency](https://github.com/ethanstockbridge/ECSE-4961/blob/main/Project%203/Images/System-1-Throughput-vs-Latency.PNG)
+![System 2 Throughput vs. Latency](https://github.com/ethanstockbridge/ECSE-4961/blob/main/Project%203/Images/System-2-Throughput-vs-Latency.PNG)
+As it can been seen, latency and bandwidth have a positive relationship. When bandwidth increases, so does latency.
+
+#### Testing from FIO
+![System 1 Read vs Write IOPS](https://github.com/ethanstockbridge/ECSE-4961/blob/main/Project%203/Images/Percentage-Read-vs-IOPS-for-read-and-write-for-system-1.PNG)
+![System 2 TRead vs Write IOPS](https://github.com/ethanstockbridge/ECSE-4961/blob/main/Project%203/Images/Percentage-Read-vs-IOPS-for-read-and-write-system-2.PNG)
+The graphs show that both read and write take approximately the same amount of IOPS. As the percentage of read increases the IOPS dedicated to read increases and the IOPS for write decreases. 
+
+![System 1 Read vs Write IOPS](https://github.com/ethanstockbridge/ECSE-4961/blob/main/Project%203/Images/Data-Access-Size-Graph-for-System-1.PNG)
+![System 2 TRead vs Write IOPS](https://github.com/ethanstockbridge/ECSE-4961/blob/main/Project%203/Images/Data-Access-Size-Graph-for-System-2.PNG)
+When the block size increases, the IOPS of read and write decrease at an exponential rate for both systems.
+
+![System 1 Read vs Write IOPS](https://github.com/ethanstockbridge/ECSE-4961/blob/main/Project%203/Images/Throughput-vs-Latency-for-System-1.PNG)
+![System 2 TRead vs Write IOPS](https://github.com/ethanstockbridge/ECSE-4961/blob/main/Project%203/Images/Throughput-vs-Latency-for-System-2.PNG)
+The graphs show that IOPS increases slightly as the latnecy is increased for both graphs.
 
 ### Conclusion
 Based off the testing performed on the memory and storage devices, there is a clear performance difference in reading versus writing intensity, data access size, and throughput versus latency. 
