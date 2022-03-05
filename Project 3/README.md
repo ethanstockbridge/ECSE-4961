@@ -430,8 +430,13 @@ MLC is a software package from Intel that is used to measure memory latncies and
 |         1000        |      55.5k            | 
 
 ### Analysis
+All data from above as has been aggregated into graphs to better understand the different tests.
 ![System 1 Read vs Write Latency](https://github.com/ethanstockbridge/ECSE-4961/blob/main/Project%203/Images/Inject-Delay-vs-Latency-for-System-1.PNG)
-![Test](Inject-Delay-vs-Latency-for-System-1.PNG)
+![System 2 Read vs Write Latency](https://github.com/ethanstockbridge/ECSE-4961/blob/main/Project%203/Images/Inject%20Delay%20vs%20Latency%20for%20System%202.PNG)
+From the graph for system 1 it can be seen that at lower inject delays, writing has the highest latency and having a mix of reads and writes has the lowest latency. As inject delay gets larger than 2000, having a mix of reads and writes has the most latency while writes have the lowest latency. 
+The graph for system 2 does not reflect the same data that system 1 had. The inverse appears to happen for system 2 with the exception of the mixed read and write data. 
+
+
 
 ### Conclusion
 Based off the testing performed on the memory and storage devices, there is a clear performance difference in reading versus writing intensity, data access size, and throughput versus latency. 
