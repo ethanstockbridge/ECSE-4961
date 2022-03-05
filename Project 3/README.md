@@ -12,9 +12,11 @@ MLC is a software package from Intel that is used to measure memory latncies and
 #### MLC Testing
 
 ##### System 1 Results (Desktop)
+The command or file used to run the tests will be displayed at the top of each table.
 [Read vs. Write Intensity]
 [100% Read]
-| Inject Dealy    | Latency (ns)    | Bandwidth (MB/sec) |
+`mlc --loaded_latency -R`
+| Inject Delay    | Latency (ns)    | Bandwidth (MB/sec) |
 | :-------------:    | :-------------:     |:----:     |
 |        0          |       615          |    35010   |
 |       2          |          607        |     35429   |
@@ -37,7 +39,8 @@ MLC is a software package from Intel that is used to measure memory latncies and
 |         20000       |         106         |     860  |
 
 [1 Read, 1 Write]
-| Inject Dealy    | Latency (ns)    | Bandwidth (MB/sec) |
+`mlc --loaded_latency -W5`
+| Inject Delay    | Latency (ns)    | Bandwidth (MB/sec) |
 | :-------------:    | :-------------:     |:----:     |
 |        0          |       448          |    24537   |
 |       2          |          471        |     24601   |
@@ -60,7 +63,8 @@ MLC is a software package from Intel that is used to measure memory latncies and
 |         20000       |         112         |     1085  |
 
 [100% Write]
-| Inject Dealy    | Latency (ns)    | Bandwidth (MB/sec) |
+`mlc --loaded_latency -W6`
+| Inject Delay    | Latency (ns)    | Bandwidth (MB/sec) |
 | :-------------:    | :-------------:     |:----:     |
 |        0          |       662          |    25444   |
 |       2          |          682        |     25444   |
@@ -83,6 +87,7 @@ MLC is a software package from Intel that is used to measure memory latncies and
 |         20000       |         107         |     660  |
 
 [Data Access Size B2500]
+`mlc --loaded_latency -b2500`
 | Inject Delay   | Latency (ns)    | Bandwidth (MB/sec) |
 | :-------------:| :-------------: |:----:              |
  | 00000 | 133.93 |  434253.9 |
@@ -106,6 +111,7 @@ MLC is a software package from Intel that is used to measure memory latncies and
  | 20000 | 115.08 |    1068.4 |
 
 [Data Access Size B500]
+`mlc --loaded_latency -b500`
 | Inject Delay   | Latency (ns)    | Bandwidth (MB/sec) |
 | :-------------:| :-------------: |:----:              |
  | 00000 | 114.89 |  502468.6 |
@@ -129,6 +135,7 @@ MLC is a software package from Intel that is used to measure memory latncies and
  | 20000 | 122.62 |    1030.9 |
 
 [Data Access Size B100]
+`mlc --loaded_latency -b100`
 | Inject Delay   | Latency (ns)    | Bandwidth (MB/sec) |
 | :-------------:    | :-------------:     |:----:     |
 | 00000 | 115.45 |  649200.0 |
@@ -151,7 +158,25 @@ MLC is a software package from Intel that is used to measure memory latncies and
 | 09000 | 124.21 |    1637.9 |
 | 20000 | 126.53 |    1009.3 |
  
-[Throughput vs. Latency] 
+[Throughput vs. Latency]
+```
+		mlc --loaded_latency -d0
+		mlc --loaded_latency -d2000
+		mlc --loaded_latency -d4000
+		mlc --loaded_latency -d6000
+		mlc --loaded_latency -d8000
+		mlc --loaded_latency -d10000
+		mlc --loaded_latency -d12000
+		mlc --loaded_latency -d14000
+		mlc --loaded_latency -d16000
+		mlc --loaded_latency -d18000
+		mlc --loaded_latency -d20000
+		mlc --loaded_latency -d22000
+		mlc --loaded_latency -d24000
+		mlc --loaded_latency -d26000
+		mlc --loaded_latency -d28000
+		mlc --loaded_latency -d30000
+  ```
 | Inject Delay   | Latency (ns)    | Bandwidth (MB/sec) |
 | :-------------:    | :-------------:     |:----:     |
 | 00000 | 888.61  |  34029.0 |
@@ -175,6 +200,7 @@ MLC is a software package from Intel that is used to measure memory latncies and
 ##### System 2 Results (Laptop)
 [Read vs. Write Intensity]
 [Read Only]
+`mlc --loaded_latency -R`
 | Inject Delay   | Latency (ns)    | Bandwidth (MB/sec) |
 | :-------------:    | :-------------:     |:----:     |
 |       0          |       473          |    11089   |
@@ -198,6 +224,7 @@ MLC is a software package from Intel that is used to measure memory latncies and
 |        20000      |         146         |     507  |
 
 [50% Read and Write]
+`mlc --loaded_latency -W5`
 | Inject Delay   | Latency (ns)    | Bandwidth (MB/sec) |
 | :-------------:    | :-------------:     |:----:     |
 |       0          |       740          |    13057   |
@@ -221,6 +248,7 @@ MLC is a software package from Intel that is used to measure memory latncies and
 |        20000      |         92         |     846  |
 
 [Write Only]
+`mlc --loaded_latency -W6`
 | Inject Delay   | Latency (ns)    | Bandwidth (MB/sec) |
 | :-------------:    | :-------------:     |:----:     |
 |       0          |       595          |    13855   |
@@ -244,6 +272,7 @@ MLC is a software package from Intel that is used to measure memory latncies and
 |        20000      |         94         |     698  |
 
 [Data Access Size B2500]
+`mlc --loaded_latency -b2500`
 | Inject Delay   | Latency (ns)    | Bandwidth (MB/sec) |
 | :-------------:    | :-------------:     |:----:     |
 |00000 | 395.01  |  13281.2 |
@@ -267,6 +296,7 @@ MLC is a software package from Intel that is used to measure memory latncies and
 |  20000  | 18.60   |  3632.1  |
 
 [Data Access Size B500]
+`mlc --loaded_latency -b500`
 | Inject Delay   | Latency (ns)    | Bandwidth (MB/sec) |
 | :-------------:    | :-------------:     |:----:     |
 | 00000  | 21.96 |  128707.8 |
@@ -291,6 +321,7 @@ MLC is a software package from Intel that is used to measure memory latncies and
 
 
 [Data Access Size B100]
+`mlc --loaded_latency -b100`
 | Inject Delay   | Latency (ns)    | Bandwidth (MB/sec) |
 | :-------------:    | :-------------:     |:----:     |
 |  00000 |   5.22 |  281787.0 |
@@ -366,7 +397,7 @@ MLC is a software package from Intel that is used to measure memory latncies and
 | Block Size         |          IOPS       | 
 | :-------------:    | :-------------:     |
 |       4k          |       7311          |   
-|       8k          |          67641      |     
+|       8k          |          6764     |     
 |       16k          |          6268        | 
 |       32k          |         5018         | 
 |         64k        |      2529            | 
@@ -379,8 +410,8 @@ MLC is a software package from Intel that is used to measure memory latncies and
 |       50          |       5532          |   
 |       100          |          5731      |     
 |       250          |          5691        | 
-|       500          |         5018         | 
-|         1000        |      2529            | 
+|       500          |         5718         | 
+|         1000        |      5816            | 
 
 ##### System 2 Results
 [Read vs. Write Intensity]
@@ -440,23 +471,28 @@ The graph for system 2 does not reflect the same data that system 1 had. The inv
 
 ![System 1 Data Access Size](https://github.com/ethanstockbridge/ECSE-4961/blob/main/Project%203/Images/Data-Access-Size-for-System-1.PNG)
 ![System 2 Data Access Size](https://github.com/ethanstockbridge/ECSE-4961/blob/main/Project%203/Images/Data-Access-Size-for-System-2.PNG)
+
 The graphs for data access size both show that the as the data access size gets lower, the higher the bandwidth which is consistent with what we learned in class.
 
 ![System 1 Throughput vs. Latency](https://github.com/ethanstockbridge/ECSE-4961/blob/main/Project%203/Images/System-1-Throughput-vs-Latency.PNG)
 ![System 2 Throughput vs. Latency](https://github.com/ethanstockbridge/ECSE-4961/blob/main/Project%203/Images/System-2-Throughput-vs-Latency.PNG)
+
 As it can been seen, latency and bandwidth have a positive relationship. When bandwidth increases, so does latency.
 
 #### Testing from FIO
 ![System 1 Read vs Write IOPS](https://github.com/ethanstockbridge/ECSE-4961/blob/main/Project%203/Images/Percentage-Read-vs-IOPS-for-read-and-write-for-system-1.PNG)
 ![System 2 TRead vs Write IOPS](https://github.com/ethanstockbridge/ECSE-4961/blob/main/Project%203/Images/Percentage-Read-vs-IOPS-for-read-and-write-system-2.PNG)
+
 The graphs show that both read and write take approximately the same amount of IOPS. As the percentage of read increases the IOPS dedicated to read increases and the IOPS for write decreases. 
 
 ![System 1 Read vs Write IOPS](https://github.com/ethanstockbridge/ECSE-4961/blob/main/Project%203/Images/Data-Access-Size-Graph-for-System-1.PNG)
 ![System 2 TRead vs Write IOPS](https://github.com/ethanstockbridge/ECSE-4961/blob/main/Project%203/Images/Data-Access-Size-Graph-for-System-2.PNG)
+
 When the block size increases, the IOPS of read and write decrease at an exponential rate for both systems.
 
 ![System 1 Read vs Write IOPS](https://github.com/ethanstockbridge/ECSE-4961/blob/main/Project%203/Images/Throughput-vs-Latency-for-System-1.PNG)
 ![System 2 TRead vs Write IOPS](https://github.com/ethanstockbridge/ECSE-4961/blob/main/Project%203/Images/Throughput-vs-Latency-for-System-2.PNG)
+
 The graphs show that IOPS increases slightly as the latnecy is increased for both graphs.
 
 ### Conclusion
