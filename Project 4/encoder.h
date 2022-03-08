@@ -32,7 +32,7 @@ private:
     int hashtable_size; 
     float threashold = 0.5; //resize when half full to increase efficiency of hashtable
 
-    int getHash(std::string item);
+    unsigned int getHash(std::string item);
     void resize();
     element* insert(std::string item);
 

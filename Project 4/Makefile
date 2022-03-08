@@ -1,2 +1,2 @@
 default:
-	g++  -g *.cpp -Wall -o ./a.out
+	g++  -g *.cpp -mavx2 -Wall -o ./a.out

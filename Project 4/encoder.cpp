@@ -49,14 +49,19 @@ Encoder::~Encoder()
 
 /**
  * @brief Obtain the hash of the passed in string item by utilizing a mathematical
- * equation that can be evaluated using intrinsics instructions
+ * equation that can be evaluated using intrinsics instructions on the char number
  * 
  * @param item Passed in string to find hash of
  * @return int 
  */
-int Encoder::getHash(std::string item)
+unsigned int Encoder::getHash(std::string item)
 {
-    return int(item.length()*item[0]*item[2]+item[1])%hashtable_size;
+    short nums[8] = {item[2],short(item.length()),item[3],short(item.length()),
+                    item[1],item[1],item[1],item[1]};
+    __m128i a = _mm_load_si128((__m128i const*)nums);
+    __m128i sum = _mm_add_epi16(a,_mm_srli_epi16(a,4));
+    _mm_store_si128((__m128i*)(nums), sum);
+    return int(nums[0]*nums[1]*nums[2]+nums[3])%hashtable_size;
 }
 
 /**
@@ -172,7 +177,7 @@ void Encoder::query(std::vector<std::string> input, std::string query)
     // Query was not in the dictionary, quit now
     if(encodedQuery == -1)
     {
-        std::cout<<"Query: "<<query<<" could not be found"<<std::endl;
+        std::cout<<"Query: "<<query<<" could not be found in the dictionary"<<std::endl;
         exit(0);
     }
     // Count encoded data if == to encoded query
@@ -184,7 +189,7 @@ void Encoder::query(std::vector<std::string> input, std::string query)
             count+=1;
         }
     }
-    std::cout<<"Query "<<query<<" was found "<<count<<" times"<<std::endl;
+    std::cout<<"Query: "<<query<<" was found "<<count<<" times in the dictionary"<<std::endl;
 }
 
 /**
