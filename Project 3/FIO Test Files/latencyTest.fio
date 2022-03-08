@@ -1,0 +1,38 @@
+# Test job that demonstrates how to use the latency target
+# profiling. Fio will find the queue depth between 1..128
+# that fits within the latency constraints of this 4k random
+# read workload.
+
+[global]
+bs=4k
+rw=randread
+random_generator=lfsr
+direct=1
+ioengine=libaio
+iodepth=128
+# 99.9% of IOs must be below the target
+latency_percentile=99.9
+
+#[job1]
+#latency_target=1000000
+#latency_window=5000000
+
+#[job2]
+#latency_target=500000
+#latency_window=5000000
+
+#[job3]
+#latency_target=250000
+#latency_window=5000000
+
+#[job4]
+#latency_target=100000
+#latency_window=5000000
+
+[job5]
+latency_target=50000
+latency_window=5000000
+
+
+[device]
+filename=/dev/sda
