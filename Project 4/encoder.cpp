@@ -156,7 +156,7 @@ void Encoder::encode(std::vector<std::string> items)
  * @param input Encoded column dictionary + encoded data
  * @param query String to be queried
  */
-void Encoder::query(std::vector<std::string> input, std::string query)
+int Encoder::query(std::vector<std::string> input, std::string query)
 {
     unsigned int i=1;
     int encodedQuery=-1;
@@ -177,8 +177,7 @@ void Encoder::query(std::vector<std::string> input, std::string query)
     // Query was not in the dictionary, quit now
     if(encodedQuery == -1)
     {
-        std::cout<<"Query: "<<query<<" could not be found in the dictionary"<<std::endl;
-        exit(0);
+        return encodedQuery;
     }
     // Count encoded data if == to encoded query
     int count=0;
@@ -189,7 +188,7 @@ void Encoder::query(std::vector<std::string> input, std::string query)
             count+=1;
         }
     }
-    std::cout<<"Query: "<<query<<" was found "<<count<<" times in the dictionary"<<std::endl;
+    return count;
 }
 
 /**

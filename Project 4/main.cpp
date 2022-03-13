@@ -99,7 +99,15 @@ int main(int argc, const char** argv)
 
         std::string query = std::string(argv[3]);
 
-        myEncoder.query(input, query);
+        auto start = std::chrono::high_resolution_clock::now();
+        int count = myEncoder.query(input, query);
+        auto stop = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+        std::cout<<"Query took "<<duration.count()*1e-6<<"s"<<std::endl;
+        if(count==-1)
+            std::cout<<"Query: "<<query<<" could not be found in the dictionary"<<std::endl;
+        else
+            std::cout<<"Query: "<<query<<" was found "<<count<<" times in the dictionary"<<std::endl;
     }
     return 0;
 }

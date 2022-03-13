@@ -46,6 +46,6 @@ public:
     //Main functions
     void encode(std::vector<std::string> items);
     void optimizeEncoding();
-    void query(std::vector<std::string> input, std::string query);
+    int query(std::vector<std::string> input, std::string query);
     void writeEncoded(std::string fout);
 };
