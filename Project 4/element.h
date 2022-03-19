@@ -19,15 +19,15 @@ public:
     element(std::string item, int id);
 
     // Setters
-    void setEncode(int encoded);
+    void setEncode(const int& encoded);
 
     // Getters
     int getCount();
     int getEncoded();
-    std::string getDecoded();
+    const std::string& getDecoded();
 
     // Operators
-    bool operator==(std::string item);
+    bool operator==(const std::string& item);
     int operator++(int);
 };
 

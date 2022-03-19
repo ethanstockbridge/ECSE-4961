@@ -12,6 +12,7 @@
 #include <iostream>
 #include <string>
 #include <fstream>
+#include <immintrin.h> // For SIMD functions
 #include "element.h"
 
 /**
@@ -28,13 +29,14 @@ private:
     std::list<element*> decoder;    //Use list as decoder
     std::list<element*> input;      //Keep a history of the input column
     
-    int num_items=0;
-    int hashtable_size; 
+    unsigned int num_items=0;
+    unsigned int hashtable_size; 
     float threashold = 0.5; //resize when half full to increase efficiency of hashtable
 
-    unsigned int getHash(std::string item);
+    unsigned int SIMD_mod(const __m128i& a, const int& b);
+    unsigned int getHash(const std::string& item);
     void resize();
-    element* insert(std::string item);
+    element* insert(const std::string& item);
 
 public:
     //Constructor
@@ -44,8 +46,8 @@ public:
     ~Encoder();
     
     //Main functions
-    void encode(std::vector<std::string> items);
+    void encode(const std::vector<std::string>& items);
     void optimizeEncoding();
-    int query(std::vector<std::string> input, std::string query);
-    void writeEncoded(std::string fout);
+    int query(const std::vector<std::string>& input, const std::string& query);
+    void writeEncoded(const std::string& fout);
 };

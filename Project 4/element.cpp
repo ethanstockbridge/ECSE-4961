@@ -28,7 +28,7 @@ element::element(std::string item, int id)
  * 
  * @return true Decoded element is the same as the passed in item
  */
-bool element::operator==(std::string item)
+bool element::operator==(const std::string& item)
 {
     return this->data==item;
 }
@@ -60,7 +60,7 @@ int element::getCount()
  * 
  * @param encoded Specified ID to set this element to
  */
-void element::setEncode(int encoded)
+void element::setEncode(const int& encoded)
 {
     this->encodedID=encoded;
 }
@@ -80,7 +80,7 @@ int element::getEncoded()
  * 
  * @return std::string Decoded data
  */
-std::string element::getDecoded()
+const std::string& element::getDecoded()
 {
     return data;
 }

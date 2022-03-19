@@ -48,20 +48,57 @@ Encoder::~Encoder()
 }
 
 /**
- * @brief Obtain the hash of the passed in string item by utilizing a mathematical
- * equation that can be evaluated using intrinsics instructions on the char number
+ * @brief Utilize using intrinisics to calculate the mod of a number (a%b)
+ * 
+ * @param a hashed number
+ * @param b mod to perform on the hashed number
+ * @return int 
+ */
+unsigned int Encoder::SIMD_mod(const __m128i& a, const int& b)
+{
+    //a % b = a - int(float(a)/float(b))*b
+    __m128 hashtablesize_1 = _mm_set1_ps(1.0f/b);
+    __m128i hashtablesize = _mm_set1_epi32(b);
+    
+    //ans = int(float(a)/float(b)) = int(float(a) * float(1/b))
+    __m128i ans = _mm_cvttps_epi32(_mm_mul_ps(_mm_cvtepi32_ps(a), hashtablesize_1));
+    ans = _mm_sub_epi32(a, _mm_mul_epu32(ans, hashtablesize));
+    unsigned int totalans[4];
+    _mm_storeu_si128((__m128i*)(totalans), ans);
+    return totalans[0];
+}
+
+
+/**
+ * @brief Obtain the hash of the passed in string item by utilizing an
+ * equation that can be evaluated by using math on the char number
  * 
  * @param item Passed in string to find hash of
  * @return int 
  */
-unsigned int Encoder::getHash(std::string item)
+unsigned int Encoder::getHash(const std::string& item)
 {
-    short nums[8] = {item[2],short(item.length()),item[3],short(item.length()),
-                    item[1],item[1],item[1],item[1]};
-    __m128i a = _mm_load_si128((__m128i const*)nums);
-    __m128i sum = _mm_add_epi16(a,_mm_srli_epi16(a,4));
-    _mm_store_si128((__m128i*)(nums), sum);
-    return int(nums[0]*nums[1]*nums[2]+nums[3])%hashtable_size;
+    // unsigned int hash = (item.length()*item[0]*item[2] + item[0] + item[1])%this->hashtable_size;
+
+    __m128i a = _mm_set1_epi32(item.length());
+    __m128i b = _mm_set1_epi32(item[0]);
+    __m128i c = _mm_set1_epi32(item[2]);
+    __m128i d = _mm_set1_epi32(item[1]);
+
+    a=_mm_mul_epu32(a,b);
+    b=_mm_mul_epu32(a,c);
+    a=_mm_add_epi32(a,b);
+    a=_mm_add_epi32(a,d);
+
+    unsigned int hash[4];
+    _mm_storeu_si128((__m128i*)(hash), a);
+
+    if(hash[0] >= this->hashtable_size)
+    {
+        hash[0] = SIMD_mod(a,this->hashtable_size);
+    }
+
+    return hash[0];
 }
 
 /**
@@ -95,13 +132,13 @@ void Encoder::resize()
  * @param item Passed in string item
  * @return element* Found/newly made element that corresponds to the std::string
  */
-element* Encoder::insert(std::string item)
+element* Encoder::insert(const std::string& item)
 {
     if(num_items > hashtable_size*threashold)
     {
         resize();
     }
-    int hash = getHash(item);
+    unsigned int hash = this->getHash(item);
     for(std::list<element*>::iterator itr=hashtable[hash].begin()
         ;itr!=hashtable[hash].end(); itr++)
     {
@@ -141,7 +178,7 @@ void Encoder::optimizeEncoding()
  * 
  * @param items Separated column data
  */
-void Encoder::encode(std::vector<std::string> items)
+void Encoder::encode(const std::vector<std::string>& items)
 {
     for(unsigned int i=0;i<items.size();i++)
     {
@@ -156,7 +193,7 @@ void Encoder::encode(std::vector<std::string> items)
  * @param input Encoded column dictionary + encoded data
  * @param query String to be queried
  */
-int Encoder::query(std::vector<std::string> input, std::string query)
+int Encoder::query(const std::vector<std::string>& input, const std::string& query)
 {
     unsigned int i=1;
     int encodedQuery=-1;
@@ -197,7 +234,7 @@ int Encoder::query(std::vector<std::string> input, std::string query)
  * 
  * @param fout 
  */
-void Encoder::writeEncoded(std::string fout)
+void Encoder::writeEncoded(const std::string& fout)
 {
     std::stringstream outfile;
     //write dictionary to top of file:
