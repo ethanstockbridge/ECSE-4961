@@ -3,11 +3,10 @@
  * @author Ethan Stockbridge (ethanstockbridge@gmail.com)
  * @author Devan Kidd (jjkidd1245@gmail.com)
  * @brief Main file
- * @date 2022-03-30
+ * @date 2022-04-05
  * 
  */
 
-#include <sqlite3.h>
 #include <iostream>
 #include <vector>
 #include <list>
@@ -16,241 +15,162 @@
 #include <sstream>
 #include <map>
 #include <set>
+#include "User.h"
+#include "Database.h"
+#include "Logger.h"
+#include "Request.h"
+#include "Bank.h"
 
-// #define MULTITHREAD
+#define MULTITHREAD
 
-/**
- * @brief C++ User class that keeps track of in-memory user ID and balance
- * 
- */
-class user
-{
-private:
-    unsigned int ID;
-    unsigned int balance;
-public:
-    user(unsigned int myID, unsigned int myBalance) : ID(myID), balance(myBalance) {}
-    void setBalance(unsigned int amount)
-    {
-        this->balance=amount;
-    }
-    unsigned int getID()
-    {
-        return this->ID;
-    }
-    unsigned int getBalance()
-    {
-        return this->balance;
-    }
-};
-
+std::list<Request*> requests;
+pthread_mutex_t req_lock = PTHREAD_MUTEX_INITIALIZER; 
 
 /**
- * @brief Database class used to interface with SQLite
+ * @brief Structure to send the information of the bank object and ID to the thread
  * 
  */
-class Database
+struct threadArgs
 {
-private:
-    sqlite3* DB;
-    std::vector<user*> userList;
-    user** hashTable;
-    pthread_mutex_t DBlock = PTHREAD_MUTEX_INITIALIZER; 
-
-public:
-    Database(std::string fName)
-    {
-        int retval = sqlite3_open(fName.c_str(), &(this->DB));
-        if(retval)
-        {
-            std::cerr << "Error open DB " << sqlite3_errmsg(DB) << std::endl;
-        }
-        else
-        {
-            std::cout << "Loaded database from file: " << fName << std::endl;
-        }
-        sqlite3_stmt* stmt;
-        retval = sqlite3_prepare_v2(this->DB, "select * from users", -1, &stmt, nullptr);
-        if(retval != SQLITE_OK) {
-            std::cout << "ERROR: while compiling sql: " << sqlite3_errmsg(this->DB) << std::endl;
-        }
-        int ret_code = 0;
-        while((ret_code = sqlite3_step(stmt)) == SQLITE_ROW)
-        {
-            unsigned int id=sqlite3_column_int(stmt, 0);
-            unsigned int balance=sqlite3_column_int(stmt, 1);
-            user* newuser = new user(id,balance);
-            this->userList.push_back(newuser);
-        }
-        this->hashTable = new user*[100];
-        for(unsigned int i=0; i<this->userList.size(); i++)
-        {
-            this->hashTable[this->userList[i]->getID()] = this->userList[i];
-        }
-        sqlite3_finalize(stmt);
-    }
-    ~Database()
-    {
-        sqlite3_close(this->DB);
-        for(int i=0;i<userList.size();i++)
-        {
-            delete this->userList[i];
-        }
-        delete [] this->hashTable;
-    }
-    user* getUser(unsigned int ID)
-    {//trivial implimentation but fast. use unique ID to find location of user in a hashtable
-        return this->hashTable[ID];
-    }
-    void syncDB()
-    {
-        pthread_mutex_lock(&(DBlock));
-        for(std::vector<user*>::iterator itr=this->userList.begin();
-            itr!=this->userList.end(); itr++)
-        {
-            user* user1 = *itr;
-            std::string query = "update users set balance="+
-                std::to_string(user1->getBalance())+" where id="+
-                std::to_string(user1->getID());
-            char *errMsg = 0;
-            if(sqlite3_exec(DB, query.c_str(), NULL, 0, &errMsg) != SQLITE_OK)
-            {
-                std::cout << "ERROR: while compiling sql: " << errMsg << std::endl;
-            }
-        }
-        pthread_mutex_unlock(&(DBlock));
-    }
-    void printDB()
-    {
-        std::cout<<"User ID\t|Balance"<<std::endl;
-        std::cout<<"-------\t|-------"<<std::endl;
-        sqlite3_stmt* stmt;
-        if(sqlite3_prepare_v2(DB, "select * from users", -1, &stmt, nullptr) != SQLITE_OK) {
-            std::cout << "ERROR: while compiling sql: " << sqlite3_errmsg(this->DB) << std::endl;
-        }
-        int ret_code = 0;
-        while((ret_code = sqlite3_step(stmt)) == SQLITE_ROW)
-        {
-            unsigned int id=sqlite3_column_int(stmt, 0);
-            unsigned int balance=sqlite3_column_int(stmt, 1);
-            std::cout<< sqlite3_column_int(stmt, 0)<<"\t|"<<sqlite3_column_int(stmt, 1)<<std::endl;
-        }
-        sqlite3_finalize(stmt);
-    }
+    unsigned long id;
+    Bank* mybank;
 };
+
+/**
+ * @brief Thread task. Every thread will perform this task.
+ * 
+ * @param args threadArgs struct
+ * @return void* param object
+ */
+void *thread_func(void* args)
+{
+    threadArgs* myargs= (threadArgs*)args;
+    Bank* mybank = myargs->mybank;
+    unsigned long myID = myargs->id;
+    while(requests.size()>0)
+    {
+        Request* myReq = NULL;
+        bool gotOne=false;
+        pthread_mutex_lock(&(req_lock));
+        if(requests.size()>0)
+        {
+            Request* myReq = requests.front();
+            requests.pop_front();
+            pthread_mutex_unlock(&(req_lock));
+            gotOne=true;
+            std::cout<<"Starting transaction #"<<myReq->getID()<<" Thread: #"<<myID<<std::endl;
+            mybank->transfer(myReq);
+            std::cout<<"Finished transaction #"<<myReq->getID()<<" Thread: #"<<myID<<std::endl;
+            delete myReq;
+        }
+        if(!gotOne)
+            pthread_mutex_unlock(&(req_lock));
+    }
+    return args;
+}
+
+//forward delcarations
+std::vector<Request*> fixRequests(std::list<Request*>& requests, const std::vector<std::vector<int>>& logged, Database* DB);
+std::vector<std::vector<int>> readFile(const std::string& fName);
 
 
 /**
- * @brief Logger class used to write journal of transactions to keep track of any faults
+ * @brief Main function, performs banking simulation
  * 
  */
-class Logger
+int main()
 {
-private:
-    std::string fName;
-    pthread_mutex_t fileLock = PTHREAD_MUTEX_INITIALIZER; 
-public:
-    Logger(){}
-    Logger(std::string filename) : fName(filename) {}
-    void initialize(std::string filename) {this->fName=filename;}
-    void write(unsigned int transaction_ID, unsigned int account_no, unsigned int pre, unsigned int post)
+    Database* mydatabase = new Database("users.db");
+    Logger* myLog = new Logger("transactions.log");
+    std::cout<<"Initial user balances:"<<std::endl;
+    mydatabase->printDB();
+    Bank* mybank = new Bank(mydatabase, myLog);
+
+    unsigned int NUM_WORKERS = 3;
+
+    std::vector<std::vector<int>> result = readFile("requests.txt");
+    std::cout<<"Loaded contents from file: requests.txt"<<std::endl;
+
+    for(int i=0;i<result.size();i++)
     {
-        //lock
-        pthread_mutex_lock(&(fileLock));
-        std::ofstream loggerFile;
-        loggerFile.open(fName, std::fstream::app);
-        loggerFile << std::to_string(transaction_ID) << " " << std::to_string(account_no)<<" "
-        <<std::to_string(pre)<<" "<<std::to_string(post)<<std::endl;
-        loggerFile.close(); //flush stream to disk
-        pthread_mutex_unlock(&(fileLock));
-        //unlock
+        requests.push_back(new Request(result[i][0], result[i][1], result[i][2], result[i][3]));
     }
-    void clear()
+
+    std::vector<std::vector<int>> transactions = readFile("transactions.log");
+    std::cout<<"Loaded contents from file: transactions.log"<<std::endl;
+
+    std::cout<<"Banking simulator starting now"<<std::endl;
+    
+    //go through requests file and see which one(s) or part(s) we already handled and are on the DB already
+    std::vector<Request*> repairList = fixRequests(requests, transactions, mydatabase);
+    std::cout<<"The program will repair "<<repairList.size()<<" requests now"<<std::endl;
+
+
+    for(unsigned int i=0;i<repairList.size(); i++)
+    {   //repair all individially prior to releasing the requests to the threads
+        mybank->transfer(repairList[i]);
+    }
+
+    #ifdef MULTITHREAD
+
+    //dispatch workers to process remaining requests after stuff is fixed
+    pthread_t threads[NUM_WORKERS];
+    int err;
+
+    std::cout << "Using " << NUM_WORKERS << " threads to perform "<<requests.size()<<" transactions" << std::endl;
+
+    std::vector<threadArgs*> threadVec;
+
+    for(unsigned long i = 0; i < NUM_WORKERS; i++) {
+        // Create new thread:
+        threadArgs* threadargs = new threadArgs;
+        threadargs->mybank = mybank;
+        threadargs->id = i;
+        threadVec.push_back(threadargs);
+        err = pthread_create(&threads[i], NULL, &thread_func, (void*)threadargs);
+        if (err)
+        {
+            std::cout << "Error: Unable to create thread," << err << std::endl;
+            exit(-1);
+        }
+    }
+
+    for(unsigned long i = 0; i < NUM_WORKERS; i++) {
+        pthread_join(threads[i], NULL);
+    }
+
+    //delete the stack after threads are done 
+    for(int i=0;i<threadVec.size();i++)
     {
-        std::ofstream loggerFile;
-        loggerFile.open(fName);
-        loggerFile.close(); //flush stream to disk
+        delete threadVec[i];
     }
-};
 
+    #else
 
-class request
-{
-private:
-    unsigned int transaction_ID;
-    unsigned int from_account;
-    unsigned int to_account;
-    unsigned int amount;
-    unsigned int status;
-    // 0 = not started
-    // 1 = successfully took out from user1's account , still needs to add to user 2's account
-    // 2 = successfully added to user2's account, COMPLETE
-public:
-    request(unsigned int ID, unsigned int From, unsigned int To,
-        unsigned int Amt) : transaction_ID(ID), from_account(From), to_account(To), 
-        amount(Amt), status(0) {}
-    void setStatus(unsigned int num){this->status=num;}
-    unsigned int getID(){return this->transaction_ID;}
-    unsigned int getAmount(){return this->amount;}
-    unsigned int getFrom(){return this->from_account;}
-    unsigned int getTo(){return this->to_account;}
-    unsigned int getStatus(){return this->status;}
-};
+    //do the rest of the untouched transactions:
+    for(std::list<Request*>::iterator itr = requests.begin(); itr!=requests.end();)
+    {
+        mybank->transfer(*itr);
+        delete *itr;
+        itr = requests.erase(itr);
+    }
 
+    #endif
+    
+    delete mydatabase;
+    delete myLog;
+    delete mybank;
+    
+    return 0;
+}
 
 /**
- * @brief Bank class to manage user's transactions and record to the database, and logger
+ * @brief Read in the transaction or request file. Turns a space-separated file
+ * into a vector of vector of ints
  * 
+ * @param fName File name
+ * @return std::vector<std::vector<int>> Data from the file row<column<int>>
  */
-class Bank
-{
-private:
-    Database* myDB;
-    Logger* myLog;
-public:
-    Bank(Database* importDB, Logger* importLog)
-    {
-        this->myDB = importDB;
-        this->myLog = importLog;
-    }
-    bool transfer(request* req)
-    {
-
-        user* user1 = myDB->getUser(req->getFrom());
-        user* user2 = myDB->getUser(req->getTo());
-
-        // user1->lock();
-        // DEADLOCK 
-        // user2->lock();
-
-        unsigned int amount = req->getAmount();
-
-        if(req->getStatus()==0)
-        {
-            if(user1->getBalance()<0)
-            {
-                return false;
-            }
-            //write to journal 
-            myLog->write(req->getID(), user1->getID(), user1->getBalance(), user1->getBalance()-amount);
-            //set balance of user1
-            user1->setBalance(user1->getBalance()-amount);
-            this->myDB->syncDB();
-        }
-
-        //write to journal 
-        myLog->write(req->getID(), user2->getID(), user2->getBalance(), user2->getBalance()+amount);
-        //set balance of user2
-        user2->setBalance(user2->getBalance()+amount);
-        this->myDB->syncDB();
-
-        
-
-        return true;
-    }
-};
-
-
 std::vector<std::vector<int>> readFile(const std::string& fName)
 {
     std::vector<std::vector<int>> result;
@@ -292,20 +212,19 @@ std::vector<std::vector<int>> readFile(const std::string& fName)
         }
         result.push_back(oneRes);
     }
-    std::cout<<"Loaded contents from file: "<<fName<<std::endl;
     return result;
 }
 
-std::ostream& operator<<(std::ostream& os, request* req)
-{
-    os<<"ID: "<<req->getID()<<" Status: "<<req->getStatus()<<std::endl;
-    os<<"From: #"<<req->getFrom()<<" To: #"<<req->getTo()<<std::endl;
-    os<<"Amount: $"<<req->getAmount()<<std::endl;
-    return os;
-}
-
-//delete complete and update the ones that are not complete;
-std::vector<request*> fixRequests(std::list<request*>& requests, const std::vector<std::vector<int>>& logged, Database* DB)
+/**
+ * @brief Main algorithm to locate and fix issues between the comparison of the transaction
+ * log and the database.
+ * 
+ * @param requests requests as specified in the requests.txt file read in
+ * @param logged already logged transactions, as specified in the transactions.log
+ * @param DB SQL database of the currently saved database data
+ * @return std::vector<Request*> Requests that must be corrected
+ */
+std::vector<Request*> fixRequests(std::list<Request*>& requests, const std::vector<std::vector<int>>& logged, Database* DB)
 {
 
     std::set<unsigned int> user_OK;
@@ -319,7 +238,7 @@ std::vector<request*> fixRequests(std::list<request*>& requests, const std::vect
         unsigned int post_price = logged[i][3];
 
         //find the request corresponding to this transcation in the requests file
-        std::list<request*>::iterator itr = requests.begin();
+        std::list<Request*>::iterator itr = requests.begin();
         for(; itr!=requests.end();itr++)
         {
             if((*itr)->getID()==transactionID)
@@ -332,7 +251,7 @@ std::vector<request*> fixRequests(std::list<request*>& requests, const std::vect
         //(suppose we are looking at the "from" and have already deleted from the "to)
             continue;
         }
-        request* thisrequest = *itr; //current requests we're looking at
+        Request* thisrequest = *itr; //current requests we're looking at
 
         //get the user's balance from the database
         unsigned int DB_balance = DB->getUser(specifiedUser)->getBalance();
@@ -394,11 +313,12 @@ std::vector<request*> fixRequests(std::list<request*>& requests, const std::vect
         }
     }
 
-    std::vector<request*> repairList;
-    for(std::list<request*>::iterator itr = requests.begin(); itr!=requests.end();)
+    //make a vector of just the ones that have to be fixed
+    std::vector<Request*> repairList;
+    for(std::list<Request*>::iterator itr = requests.begin(); itr!=requests.end();)
     {
-        request* thisrequest = *itr;
-        if(thisrequest->getStatus()>0)
+        Request* thisrequest = *itr;
+        if(thisrequest->getStatus()>0) //requests that were started but not completed
         {
             repairList.push_back(thisrequest);
             itr=requests.erase(itr);
@@ -407,128 +327,8 @@ std::vector<request*> fixRequests(std::list<request*>& requests, const std::vect
             itr++;
     }
 
-    std::cout<<"The program will repair "<<repairList.size()<<" requests now"<<std::endl;
+    //return the ones that need to be fixed. the others have been kept/deleted from the 
+    //source, passed by ref
     return repairList;
 }
 
-std::list<request*> requests;
-pthread_mutex_t req_lock = PTHREAD_MUTEX_INITIALIZER; 
-
-struct threadArgs
-{
-    unsigned long id;
-    Bank* mybank;
-};
-
-void *thread_func(void* args)
-{
-    threadArgs* myargs= (threadArgs*)args;
-    Bank* mybank = myargs->mybank;
-    unsigned long myID = myargs->id;
-    while(requests.size()>0)
-    {
-        request* myReq = NULL;
-        bool gotOne=false;
-        pthread_mutex_lock(&(req_lock));
-        if(requests.size()>0)
-        {
-            request* myReq = requests.front();
-            requests.pop_front();
-            pthread_mutex_unlock(&(req_lock));
-            gotOne=true;
-            std::cout<<"Starting transaction #"<<myReq->getID()<<" Thread: #"<<myID<<std::endl;
-            mybank->transfer(myReq);
-            std::cout<<"Finished transaction #"<<myReq->getID()<<" Thread: #"<<myID<<std::endl;
-            delete myReq;
-        }
-        if(!gotOne)
-            pthread_mutex_unlock(&(req_lock));
-    }
-    return args;
-}
-
-
-/**
- * @brief Main function, performs banking simulation
- * 
- */
-int main()
-{
-    Database* mydatabase = new Database("users.db");
-    Logger* myLog = new Logger("transactions.log");
-    std::cout<<"Initial user balances:"<<std::endl;
-    mydatabase->printDB();
-    Bank* mybank = new Bank(mydatabase, myLog);
-
-    unsigned int NUM_WORKERS = 3;
-
-    std::vector<std::vector<int>> result = readFile("requests.txt");
-
-    for(int i=0;i<result.size();i++)
-    {
-        requests.push_back(new request(result[i][0], result[i][1], result[i][2], result[i][3]));
-    }
-
-    std::vector<std::vector<int>> transactions = readFile("transactions.log");
-
-    std::cout<<"Banking simulator starting now"<<std::endl;
-    
-    //go through requests file and see which one(s) or part(s) we already handled and are on the DB already
-    std::vector<request*> repairList = fixRequests(requests, transactions, mydatabase);
-
-    for(unsigned int i=0;i<repairList.size(); i++)
-    {   //repair all individially prior to releasing the requests to the threads
-        mybank->transfer(repairList[i]);
-    }
-
-    #ifdef MULTITHREAD
-
-    //dispatch workers to process remaining requests after stuff is fixed
-    pthread_t threads[NUM_WORKERS];
-    int err;
-
-    std::cout << "Using " << NUM_WORKERS << " threads for compression" << std::endl;
-
-    std::vector<threadArgs*> threadVec;
-
-    for(unsigned long i = 0; i < NUM_WORKERS; i++) {
-        // Create new thread:
-        threadArgs* threadargs = new threadArgs;
-        threadargs->mybank = mybank;
-        threadargs->id = i;
-        threadVec.push_back(threadargs);
-        err = pthread_create(&threads[i], NULL, &thread_func, (void*)threadargs);
-        if (err)
-        {
-            std::cout << "Error: Unable to create thread," << err << std::endl;
-            exit(-1);
-        }
-    }
-
-    for(unsigned long i = 0; i < NUM_WORKERS; i++) {
-        pthread_join(threads[i], NULL);
-    }
-
-    for(int i=0;i<threadVec.size();i++)
-    {
-        delete threadVec[i];
-    }
-
-    #else
-
-    //do the rest of the OK transactions:
-    for(std::list<request*>::iterator itr = requests.begin(); itr!=requests.end();)
-    {
-        mybank->transfer(*itr);
-        delete *itr;
-        itr = requests.erase(itr);
-    }
-
-    #endif
-    
-    delete mydatabase;
-    delete myLog;
-    delete mybank;
-    
-    return 0;
-}
