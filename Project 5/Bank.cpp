@@ -21,10 +21,6 @@ bool Bank::transfer(Request* req)
     User* user1 = myDB->getUser(req->getFrom());
     User* user2 = myDB->getUser(req->getTo());
 
-    // user1->lock();
-    // DEADLOCK ?
-    // user2->lock();
-
     unsigned int amount = req->getAmount();
 
     if(req->getStatus()==0)
