@@ -21,7 +21,7 @@
 #include "Request.h"
 #include "Bank.h"
 
-#define MULTITHREAD
+// #define MULTITHREAD
 
 std::list<Request*> requests;
 pthread_mutex_t req_lock = PTHREAD_MUTEX_INITIALIZER; 
@@ -58,9 +58,9 @@ void *thread_func(void* args)
             requests.pop_front();
             pthread_mutex_unlock(&(req_lock));
             gotOne=true;
-            std::cout<<"Starting transaction #"<<myReq->getID()<<" Thread: #"<<myID<<std::endl;
+            std::cout<<"Thread #"<<myID<<" starting transaction #"<<myReq->getID()<<std::endl;
             mybank->transfer(myReq);
-            std::cout<<"Finished transaction #"<<myReq->getID()<<" Thread: #"<<myID<<std::endl;
+            std::cout<<"Thread #"<<myID<<" finished transaction #"<<myReq->getID()<<std::endl;
             delete myReq;
         }
         if(!gotOne)
@@ -78,15 +78,32 @@ std::vector<std::vector<int>> readFile(const std::string& fName);
  * @brief Main function, performs banking simulation
  * 
  */
-int main()
+int main(int argc, const char** argv)
 {
+    const char* exeName = argv[0];
+
+    #ifdef MULTITHREAD
+
+    if (argc!=2) {
+        std::cout<<"Error: Incorrect arguments"<<std::endl;
+        std::cout<<"Usage: "<<exeName<<" <Thread count>"<<std::endl;;
+        return 1;
+    }
+
+    unsigned int NUM_WORKERS = std::stoi(argv[1]);
+
+    if(NUM_WORKERS==0)
+    {
+        std::cout<<"Error: Numbers of workers must be more than 0"<<std::endl;
+    }
+
+    #endif 
+    
     Database* mydatabase = new Database("users.db");
     Logger* myLog = new Logger("transactions.log");
     std::cout<<"Initial user balances:"<<std::endl;
     mydatabase->printDB();
     Bank* mybank = new Bank(mydatabase, myLog);
-
-    unsigned int NUM_WORKERS = 3;
 
     std::vector<std::vector<int>> result = readFile("requests.txt");
     std::cout<<"Loaded contents from file: requests.txt"<<std::endl;
