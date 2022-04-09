@@ -1,4 +1,4 @@
-# Project 5: Realtime money transaction simulator
+# Project 5: Multithread money transaction simulator
 
 ## Introduction
 
