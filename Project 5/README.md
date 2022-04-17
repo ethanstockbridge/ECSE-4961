@@ -54,6 +54,11 @@ There are 3 main files that are used for in program besides the c++ files:
 - `requests.txt` - This file specifies which requests must be completed. Each line consists of 4 values: unique request id, user 1 id, user 2 id, and amont. At the end of each request, user 1 will transfer user 2 x amount of money.
 - `transactions.log` - This log file specifies which transactions have (supposedly) been processed and pushed to the database, but we will discuss later examples of inconsistencies. Each line consists of 4 items: request id, user id, pre-balance, post-balance
 
+## Testing
+
+To run the pre-configured files, you can go to ./tests/ex# and copy the files to the root folder, "Project 5".
+Ex: If you want to test the example 1 below, go to ./tests/ex1 and copy the files to root folder, "Project 5", then run the program using `./a.out` (with optional threads)
+
 ## Example 1: Resuming banking program after server crash (with previous successful database update)
 
 ### Example Situation
@@ -131,8 +136,6 @@ We can now see that the output database contents show exactly what is desired. T
 
 
 ### Testing example 1
-
-* Note that the files in this repo are currently configured to run this example test, once (as they will be updated after running)
 
 Testing this is a bit hard, since we cannot guarantee that given threads will choose the transactions as shown in the example. However, we can assume that there is a server failure and start from there, and observe the corrections.  
 By filling `requests.txt` with:
@@ -216,7 +219,6 @@ Use the same inputs from example 1, except set up the users.db as shown below:
 ```
 
 Now, running the program, you can see that the users.db has been updated correctly, and the transactions.log now has 6 lines displaying all of the logged transactions (committed correctly or not)
-
 
 ## Concusion
 
