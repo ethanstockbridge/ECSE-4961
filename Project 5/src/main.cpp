@@ -15,11 +15,11 @@
 #include <sstream>
 #include <map>
 #include <set>
-#include "User.h"
-#include "Database.h"
-#include "Logger.h"
-#include "Request.h"
-#include "Bank.h"
+#include "../inc/User.h"
+#include "../inc/Database.h"
+#include "../inc/Logger.h"
+#include "../inc/Request.h"
+#include "../inc/Bank.h"
 
 // #define MULTITHREAD
 

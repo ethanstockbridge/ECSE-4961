@@ -12,17 +12,18 @@ For operation, a linux machine must be used, as the pthread module is utilized f
 ## Usage 
 
 To build:
+Go to the folder "Project 5" and do one of the following:
+- Recommended: use command `make` on terminal to use the makefile build  
+ Multithread build: `make MULTITHREAD`
 
-`g++  -g *.cpp -lsqlite3 -pthread -o ./a.out`  
-Additional (optional) build flags:  
-`-DMULTITHREAD`  to define multithreading
+- `g++  -g ./src/*.cpp -lsqlite3 -pthread -o ./a.out`  
+    Multithread build:  
+    `g++  -g ./src/*.cpp -lsqlite3 -pthread -DMULTITHREAD -o ./a.out`  
 
-To run:  
-
-If built with `-DMULTITHREAD`  
+To run (in folder "Project 5"):  
+If built with `-DMULTITHREAD`:  
 `./a.out <NUM of threads>`  
-
-If built without `-DMULTITHREAD`  
+If built without `-DMULTITHREAD`:  
 `/a.out`
 
 ## Methodology

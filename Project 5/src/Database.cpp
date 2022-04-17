@@ -7,7 +7,7 @@
  * 
  */
 
-#include "Database.h"
+#include "../inc/Database.h"
 
 
 Database::Database(std::string fName)

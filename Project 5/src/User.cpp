@@ -7,7 +7,7 @@
  * 
  */
 
-#include "User.h"
+#include "../inc/User.h"
 
 void User::setBalance(unsigned int amount)
 {

@@ -7,7 +7,7 @@
  * 
  */
 
-#include "Bank.h"
+#include "../inc/Bank.h"
 
 Bank::Bank(Database* importDB, Logger* importLog)
 {
