@@ -15,7 +15,7 @@ Database::Database(std::string fName)
     int retval = sqlite3_open(fName.c_str(), &(this->DB));
     if(retval)
     {
-        std::cerr << "Error open DB " << sqlite3_errmsg(DB) << std::endl;
+        std::cerr << "Error opening/creating DB " << sqlite3_errmsg(DB) << std::endl;
     }
     else
     {
@@ -25,6 +25,7 @@ Database::Database(std::string fName)
     retval = sqlite3_prepare_v2(this->DB, "select * from users", -1, &stmt, nullptr);
     if(retval != SQLITE_OK) {
         std::cout << "ERROR: while compiling sql: " << sqlite3_errmsg(this->DB) << std::endl;
+        exit(1);
     }
     int ret_code = 0;
     while((ret_code = sqlite3_step(stmt)) == SQLITE_ROW)

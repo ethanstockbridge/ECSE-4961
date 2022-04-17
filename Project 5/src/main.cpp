@@ -193,6 +193,10 @@ std::vector<std::vector<int>> readFile(const std::string& fName)
     std::vector<std::vector<int>> result;
     std::ifstream file;
     file.open(fName);
+    if(file.fail()){
+        std::cerr<<"ERROR: File "<<fName<<" does not exist."<<std::endl;
+        exit(1);
+    }
     std::string line;
     std::vector<std::string> lines;
     while(getline (file,line))

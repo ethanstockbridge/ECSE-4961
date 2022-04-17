@@ -56,8 +56,8 @@ There are 3 main files that are used for in program besides the c++ files:
 
 ## Testing
 
-To run the pre-configured files, you can go to ./tests/ex# and copy the files to the root folder, "Project 5".
-Ex: If you want to test the example 1 below, go to ./tests/ex1 and copy the files to root folder, "Project 5", then run the program using `./a.out` (with optional threads)
+To run the pre-configured files, you can go to ./tests/ex# and copy the files to the root folder, "Project 5".  
+Ex: If you want to test the **Example 1** below, go to ./tests/ex1 and copy the files to root folder, "Project 5", then run the program using `./a.out` after building (with optional threads)
 
 ## Example 1: Resuming banking program after server crash (with previous successful database update)
 
