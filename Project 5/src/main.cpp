@@ -173,6 +173,9 @@ int main(int argc, const char** argv)
     }
 
     #endif
+
+    std::cout<<"Final user balances:"<<std::endl;
+    mydatabase->printDB();
     
     delete mydatabase;
     delete myLog;
